@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/minicrm
+    username: crm
+    password: crm
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Holon JDBC Datastore auto-configuration picks up the Spring DataSource above and
+# publishes a Datastore into the Holon Context. No manual registration required.
+holon:
+  datastore:
+    jdbc:
+      auto-commit: false
+
+server:
+  port: 8080

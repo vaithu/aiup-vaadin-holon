@@ -1,0 +1,45 @@
+NOTICE
+======
+
+aiup-vaadin-holon — AI Unified Process Marketplace (Holon Platform + Vaadin Flow edition)
+Copyright 2024 vaithu
+
+Licensed under the Apache License, Version 2.0.
+
+---
+
+This work is derived from the AI Unified Process Marketplace
+(https://github.com/AI-Unified-Process/marketplace), which is also
+licensed under the Apache License, Version 2.0.
+
+Original authors:
+  Simon Martinelli  <simon@martinelli.ch>  — https://unifiedprocess.ai
+  Marc Affolter
+
+The following components are copied verbatim from the upstream marketplace
+under the same Apache-2.0 license:
+
+  aiup-core/
+    skills/requirements/   — stack-agnostic requirements skill
+    skills/entity-model/   — entity model skill
+    skills/use-case-diagram/  — use case diagram skill
+    skills/use-case-spec/  — use case specification skill
+    skills/reverse-engineer/ — reverse-engineer skill
+
+The `aiup-vaadin-holon/` plugin is a new derivative work that replaces the
+`aiup-vaadin-jooq` construction plugin with one targeting the Holon Platform
+(https://github.com/vaithu) and Vaadin Flow 24 LTS.
+
+Holon Platform is copyright (C) 2016-2024 Holon Platform and its contributors,
+licensed under the Apache License, Version 2.0.
+Source repositories: https://github.com/vaithu/holon-platform and related repos.
+
+Vaadin Flow is copyright (C) 2000-2024 Vaadin Ltd,
+licensed under the Apache License, Version 2.0.
+
+Spring Boot is copyright (C) 2012-2024 VMware, Inc. and its contributors,
+licensed under the Apache License, Version 2.0.
+
+Flyway is copyright (C) Red Gate Software Ltd, licensed under the Apache License, Version 2.0.
+
+All other referenced libraries retain their respective original licenses.

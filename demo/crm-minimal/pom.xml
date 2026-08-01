@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>crm-minimal</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>MiniCRM (aiup-vaadin-holon demo)</name>
+    <description>Minimal CRM demo built with the aiup-vaadin-holon plugin (Holon Platform + Vaadin Flow)</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.0</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Holon core / auth / jdbc versions (built from https://github.com/vaithu/holon-vaadin-flow) -->
+        <holon.core.version>10.0.0</holon.core.version>
+        <!-- Holon Vaadin Flow version (targets Vaadin 25.2.x + Spring Boot 4.1) -->
+        <holon.vaadin.version>10.0.1</holon.vaadin.version>
+        <!-- Vaadin version must match what holon-vaadin-flow-bom expects -->
+        <vaadin.version>25.2.1</vaadin.version>
+        <postgresql.version>42.7.11</postgresql.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--
+                Holon Vaadin Flow BOM — pins holon-vaadin-flow-spring-boot at 10.0.1.
+                Note: com.holon-platform:holon-bom does NOT exist; use per-module BOMs.
+                Artifacts built from https://github.com/vaithu/holon-vaadin-flow
+                (branch modernize/java-20260526093038) — install locally with `mvn install`.
+            -->
+            <dependency>
+                <groupId>com.holon-platform.vaadin</groupId>
+                <artifactId>holon-vaadin-flow-bom</artifactId>
+                <version>${holon.vaadin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Holon JDBC Datastore BOM — pins holon-starter-jdbc-datastore at 10.0.0 -->
+            <dependency>
+                <groupId>com.holon-platform.jdbc</groupId>
+                <artifactId>holon-datastore-jdbc-bom</artifactId>
+                <version>${holon.core.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Vaadin BOM -->
+            <dependency>
+                <groupId>com.vaadin</groupId>
+                <artifactId>vaadin-bom</artifactId>
+                <version>${vaadin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Holon Vaadin Flow + Spring Boot starter (pulls in Vaadin 25.2 and AuthContext wiring) -->
+        <dependency>
+            <groupId>com.holon-platform.vaadin</groupId>
+            <artifactId>holon-vaadin-flow-spring-boot</artifactId>
+        </dependency>
+
+        <!-- Holon JDBC Datastore Spring Boot starter (publishes Datastore into the Context) -->
+        <dependency>
+            <groupId>com.holon-platform.jdbc</groupId>
+            <artifactId>holon-starter-jdbc-datastore</artifactId>
+        </dependency>
+
+        <!-- Holon Auth — groupId is com.holon-platform.core, not com.holon-platform.auth -->
+        <dependency>
+            <groupId>com.holon-platform.core</groupId>
+            <artifactId>holon-auth</artifactId>
+            <version>${holon.core.version}</version>
+        </dependency>
+
+        <!-- Flyway schema migrations -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver (patched version, see README security note) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>com.vaadin</groupId>
+                <artifactId>vaadin-maven-plugin</artifactId>
+                <version>${vaadin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-frontend</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

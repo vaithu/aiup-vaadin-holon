@@ -1,0 +1,19 @@
+{
+  "name": "aiup-vaadin-holon-marketplace",
+  "owner": {
+    "name": "vaithu",
+    "url": "https://github.com/vaithu/aiup-vaadin-holon"
+  },
+  "plugins": [
+    {
+      "name": "aiup-core",
+      "source": "./aiup-core",
+      "description": "AI Unified Process — stack-agnostic core methodology (requirements, entity model, use case diagram, use case spec, reverse-engineer)"
+    },
+    {
+      "name": "aiup-vaadin-holon",
+      "source": "./aiup-vaadin-holon",
+      "description": "AI Unified Process plugin for the Holon Platform + Vaadin Flow stack: Bean/BeanPropertySet persistence via Holon Datastore, Holon Vaadin Flow UI, Holon Auth security. Java 21 / Holon 6.0.x / Vaadin 24 LTS / Spring Boot 3.3.x LTS."
+    }
+  ]
+}
