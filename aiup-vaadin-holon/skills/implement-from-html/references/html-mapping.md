@@ -1,81 +1,105 @@
-# HTML Region → Holon Vaadin Component Mapping
+﻿# HTML Region → Holon Vaadin Component Mapping
+
+> **Source of truth**: verified against `com.holonplatform.vaadin.flow.demo.ui.views.*` (August 2026).
+> Every API below compiles. Do **not** invent methods or use class names that differ from this table.
 
 Use this table to select the correct Holon Vaadin Flow component for each HTML region
-identified in a mockup. Mark a fallback entry as `// FALLBACK: no Holon equivalent for <thing>`
-whenever a raw Vaadin component must be used.
+identified in a mockup. If no Holon equivalent exists, **stop immediately and ask the developer**.
 
 ---
 
 ## Layout / shell regions
 
-| HTML pattern | Holon component | Fallback (raw Vaadin) |
-|-------------|-----------------|----------------------|
-| `<body>` / full-page wrapper | `VerticalLayout` / `HorizontalLayout` | — |
-| Appbar / topbar (`<header>`, `<nav class="topbar">`) | — | `// FALLBACK: no Holon equivalent for AppLayout` → `com.vaadin.flow.component.applayout.AppLayout` |
-| Sidenav / left navigation (`<nav class="sidenav">`, `<ul class="nav">`) | — | `// FALLBACK: no Holon equivalent for SideNav` → `com.vaadin.flow.component.sidenav.SideNav` |
-| Breadcrumb (`<nav aria-label="breadcrumb">`) | — | `// FALLBACK: no Holon equivalent for breadcrumb` → `com.vaadin.flow.component.html.Span` chain |
-| Tab bar (`<ul role="tablist">`, `<div class="tabs">`) | — | `// FALLBACK: no Holon equivalent for Tabs` → `com.vaadin.flow.component.tabs.Tabs` + `Tab` |
-| Card / panel (`<div class="card">`, `<section>`) | `VerticalLayout` with card style | — |
-| Footer / action bar (`<footer>`, `<div class="action-bar">`) | `HorizontalLayout` | — |
+| HTML pattern | Correct Holon component | Notes |
+|-------------|-------------------------|-------|
+| Full creation page (multi-step form + sticky bar) | `Components.entityCreationForm()...build()` → `EntityCreationForm` | See `NewCustomerDemoView` |
+| Step card inside creation page | `Components.formStepCard().stepNumber(n).totalSteps(N).title("...").content(...).build()` → `FormStepCard` | |
+| App shell / main layout | `Components.appShell().navbarBrand("...").nav(nav).build()` → `AppShellLayout` | |
+| Side nav | `SideNavBuilder.create().withNavItem("Label", View.class, VaadinIcon.X.create()).add().buildWrapper()` | |
+| Responsive viewport slots (mobile/desktop) | `ResponsiveDiv.configure(this).slotOnce(ViewMode.DESKTOP, ()->...).build()` | |
+| Breadcrumb | `BreadcrumbItem` / `BreadcrumbPage` (from `com.holonplatform.vaadin.flow.vaadinplus.components`) | |
+| Tab bar | ⚠️ No Holon equivalent | **Stop and ask the developer** |
+| Card / panel | Plain `Div` with CSS class — no Holon wrapper needed | |
+| Footer / sticky action bar | Included in `EntityCreationForm` (`barAction(...)`) or manual `Div` with CSS | |
 
 ---
 
 ## Data display regions
 
-| HTML pattern | Holon component | Fallback (raw Vaadin) |
-|-------------|-----------------|----------------------|
-| Data table (`<table>`, `<ag-grid>`, `<div role="grid">`) | `ListingBundle.builder(PROPERTIES).dataSource(ds, target).build()` | — |
-| Paginated list with rows | `ListingBundle` with lazy Datastore data source | — |
-| Read-only detail view (labels + values) | `EntityPanelForm.builder(PROPERTIES).readOnly(true).build()` | — |
-| Master-detail split (`<div class="master"> / <div class="detail">`) | `HorizontalLayout` → left: `ListingBundle`, right: `EntityPanelForm` | — |
-| Timeline / activity feed | — | `// FALLBACK: no Holon equivalent for activity timeline` → custom `VerticalLayout` with `Span` |
+| HTML pattern | Correct Holon component |
+|-------------|------------------------|
+| Data table / grid | `Components.listing(T.class).columns(...).fetch((q,text,sort)->...).build()` — layout: `bundle.toolbar()` + `bundle.grid()` + `bundle.footer()` |
+| Paginated list | Same `Components.listing(T.class)` with `.pageSizes(...)` and `.defaultPageSize(...)` |
+| Read-only detail | `EntityFormPanel.bean(T.class)...readOnly().build()` + `form.setBean(bean)` |
+| Master-detail split | `MasterDetailLayout<T>` from `com.iyensoft.vaadin.flow.components` — see `MasterDetailDemoV2` |
+| Timeline / activity feed | ⚠️ No Holon equivalent — **stop and ask the developer** |
 
 ---
 
 ## Form / input regions
 
-| HTML pattern | Inferred type | Holon input component |
-|-------------|--------------|----------------------|
-| `<input type="text">` | `String` | `Components.input.string().label("...").build()` |
-| `<input type="number">`, `<input type="currency">` | `BigDecimal` | `Components.input.bigDecimal().label("...").build()` |
-| `<input type="date">` | `LocalDate` | `Components.input.localDate().label("...").build()` |
-| `<input type="datetime-local">` | `LocalDateTime` | `Components.input.localDateTime().label("...").build()` |
-| `<input type="email">` | `String` | `Components.input.string().label("...").build()` (+ email validator) |
-| `<input type="checkbox">` | `Boolean` | `Components.input.boolean_().label("...").build()` |
-| `<textarea>` | `String` | `Components.input.string().multiLine().label("...").build()` |
-| `<select>` (single) | `String` (or enum) | `Components.input.singleSelect(String.class).items(...).build()` |
-| `<select multiple>` | `Set<String>` | `Components.input.multiSelect(String.class).items(...).build()` |
-| `<input type="file">` | — | `// FALLBACK: no Holon equivalent for Upload` → `com.vaadin.flow.component.upload.Upload` |
-| Complete `<form>` with multiple fields | all fields | `EntityPanelForm.builder(PROPERTIES).build()` |
+> All input builders are accessed via `com.holonplatform.vaadin.flow.components.Input` (static methods).
+> **Not** `Components.input.*` — that namespace does **not** exist.
+
+| HTML element | Inferred type | Correct Holon input |
+|-------------|--------------|---------------------|
+| `<input type="text">` | `String` | `Input.string().label("...").build()` |
+| `<textarea>` | `String` | `Input.stringArea().label("...").build()` |
+| `<input type="number">` (integer) | `Integer` | `Input.number(Integer.class).label("...").build()` |
+| `<input type="number">` (decimal) | `Double` / `BigDecimal` | `Input.number(Double.class).label("...").build()` |
+| `<input type="date">` | `LocalDate` | `Input.localDate().label("...").build()` |
+| `<input type="datetime-local">` | `LocalDateTime` | `Input.localDateTime().label("...").build()` |
+| `<input type="email">` | `String` | `Input.string().label("...").build()` (+ email validator) |
+| `<input type="checkbox">` | `Boolean` | `Input.boolean_().label("...").build()` |
+| Toggle / switch | `Boolean` | `Input.boolean_().label("...").styleName("switch").build()` |
+| `<select>` (single) | `String` | `Input.singleSelect(String.class).items(...).label("...").build()` |
+| `<select>` (enum) | `MyEnum` | `Input.enumSelect(MyEnum.class).label("...").build()` |
+| Radio button group | `String` | `Input.singleOptionSelect(String.class).items(...).label("...").build()` |
+| `<select multiple>` / checkbox group | `Set<String>` | `Input.multiOptionSelect(String.class).items(...).label("...").build()` |
+| `<input type="file">` | — | ⚠️ **Stop and ask the developer** |
+| Complete `<form>` with multiple fields | bean | `EntityFormPanel.bean(MyBean.class).properties(...).autoLabels(true).bind("field", input).noFooter().build()` |
 
 ---
 
 ## Action / button regions
 
-| HTML pattern | Holon component |
-|-------------|-----------------|
-| Primary action button (`class="btn-primary"`, `type="submit"`) | `Components.button().text("...").themeVariants(ButtonVariant.LUMO_PRIMARY).onClick(...).build()` |
-| Danger / destructive button (`class="btn-danger"`) | `Components.button().text("...").themeVariants(ButtonVariant.LUMO_ERROR).onClick(...).build()` |
-| Secondary / cancel button | `Components.button().text("...").onClick(...).build()` |
-| Icon-only button (`<button><svg>...</svg></button>`) | `// FALLBACK: no Holon equivalent for icon-only button with aria-label` → raw `Button` with `Icon` |
-| Dropdown button / split button | `// FALLBACK: no Holon equivalent for MenuBar` → `com.vaadin.flow.component.menubar.MenuBar` |
+| HTML pattern | Correct Holon API |
+|-------------|------------------|
+| Primary action (`class="btn-primary"`, `type="submit"`) | `ButtonBuilder.create().text("...").primary().onClick(...).build()` |
+| Destructive / danger button | `ButtonBuilder.create().text("...").error().onClick(...).build()` |
+| Secondary / cancel button | `ButtonBuilder.create().text("...").secondary().onClick(...).build()` |
+| Ghost / tertiary button | `ButtonBuilder.create().text("...").tertiary().onClick(...).build()` |
+| Icon-only button | `ButtonBuilder.create().icon(VaadinIcon.X).icon().ariaLabel("Close").build()` |
+| Pre-configured delete | `ButtonBuilder.create().preset(ButtonPreset.DELETE).onClick(...).build()` |
+| Shortcut | `Components.button().text("...").primary().build()` — delegates to `ButtonBuilder` |
+
+> ⛔ **Wrong**: `Components.button().text("...").themeVariants(ButtonVariant.LUMO_PRIMARY)` — do not use raw Vaadin `ButtonVariant`.
+> Use semantic variant methods: `.primary()`, `.error()`, `.secondary()`, `.tertiary()`.
 
 ---
 
 ## Feedback / overlay regions
 
-| HTML pattern | Holon component | Fallback (raw Vaadin) |
-|-------------|-----------------|----------------------|
-| Success toast / snackbar | — | `// FALLBACK: no Holon equivalent for themed Notification` → `Notification` + `NotificationVariant.LUMO_SUCCESS` |
-| Error toast | — | `// FALLBACK: no Holon equivalent for error-themed Notification` → `Notification` + `NotificationVariant.LUMO_ERROR` |
-| Confirmation dialog (`<dialog>`, `<div role="dialog">`) | — | `// FALLBACK: no Holon equivalent for ConfirmDialog` → `com.vaadin.flow.component.confirmdialog.ConfirmDialog` |
-| Loading spinner / skeleton | — | `// FALLBACK: no Holon equivalent for ProgressBar` → `com.vaadin.flow.component.progressbar.ProgressBar` |
+| HTML pattern | Correct Holon API |
+|-------------|------------------|
+| Success toast | `NotificationUtil.notificationSuccess("...")` or `NotificationBuilder.create().text("...").success().build().open()` |
+| Error toast | `NotificationUtil.notificationError("...")` or `NotificationBuilder.create().text("...").error().build().open()` |
+| Warning toast | `NotificationBuilder.create().text("...").warning().build().open()` |
+| Confirmation dialog | `AlertDialog.builder().title("...").description("...").confirmText("...").variant(Alert.Variant.DESTRUCTIVE).onConfirm(()->...).open()` |
+| Inline alert / banner | `Alert.builder(Alert.Variant.WARNING).title("...").description("...").build()` |
+| Loading spinner | ⚠️ No Holon equivalent — **stop and ask the developer** |
+
+> `NotificationUtil` is `com.holonplatform.vaadin.flow.components.utils.NotificationUtil` — it IS in Holon.
+> `AlertDialog` is `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog`.
 
 ---
 
 ## Mapping decision rules
 
-1. **Prefer Holon** — always check whether Holon Vaadin Flow covers the region first.
-2. **Fallback with comment** — if raw Vaadin is needed, add `// FALLBACK: no Holon equivalent for <thing>` before the import or instantiation.
-3. **Verify with MCP** — if uncertain, query the Vaadin MCP server (`https://mcp.vaadin.com/docs`) or JavaDocs MCP to confirm availability in Holon 10.0.x / Vaadin 25.
-4. **Unclear mapping** — state the ambiguity and ask the user to confirm before proceeding.
+1. **Use exact API** — `EntityFormPanel.bean(T.class)` (NOT `EntityPanelForm`, NOT `EntityFormPanel.builder()`);
+   `Components.listing(T.class)` (NOT `ListingBundle.builder(PROPERTIES)`);
+   `Input.string()` (NOT `Components.input.string()`).
+2. **Feature packages** — all emitted classes go in `com.example.<app>.<feature>`. No `domain/`, `service/`, or `ui/` layer packages.
+3. **No Holon equivalent → stop and ask** — do not emit raw Vaadin or unofficial helper classes without explicit developer approval.
+4. **Verify with MCP** — use the Vaadin MCP server (`https://mcp.vaadin.com/docs`) or JavaDocs MCP when uncertain.
+5. **Unclear mapping** — state the ambiguity and ask the user to confirm before proceeding.

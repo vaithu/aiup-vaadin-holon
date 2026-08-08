@@ -101,6 +101,26 @@ import com.holonplatform.core.beans.NotNull;
 private String vendorName;
 ```
 
+### `@Sequence` — property ordering
+
+Use `@Sequence` to control the order in which properties appear in `BeanPropertySet` iteration,
+which determines the default column / field order in `ListingBundle` and `EntityPanelForm`.
+
+```java
+import com.holonplatform.core.beans.Sequence;
+
+@Sequence(1)
+private Long id;
+
+@Sequence(2)
+private String vendorName;
+
+@Sequence(3)
+private LocalDate invoiceDate;
+```
+
+Lower values appear first. Properties without `@Sequence` appear after all sequenced ones.
+
 ### Foreign key fields
 
 ```java
@@ -114,43 +134,32 @@ private Customer customer;      // loaded separately, not persisted via BeanProp
 
 ---
 
-## BeanPropertySet
+## BeanPropertySet (declare in `<Entity>Model`, not on the bean)
 
-`BeanPropertySet<T>` is the property descriptor for a JavaBean. Declare it as a
-`public static final` constant on the bean class (or a companion class):
+`BeanPropertySet<T>` is the property descriptor for a JavaBean. Declare it in the companion
+`<Entity>Model` interface — **not** on the bean class itself — alongside all typed property
+constants and `PropertySet` subsets. See `datastore-patterns.md` for the full Model interface pattern.
+
+The bean class stays clean: no `PROPERTIES` static field, no Holon imports (except annotations).
+
+### Using BeanPropertySet for typed property constants
 
 ```java
 import com.holonplatform.core.beans.BeanPropertySet;
+import com.holonplatform.core.property.NumericProperty;
+import com.holonplatform.core.property.StringProperty;
+import com.holonplatform.core.property.TemporalProperty;
 
-@DataPath("order")
-public class Order {
+BeanPropertySet<Order> PROPERTY_SET = BeanPropertySet.create(Order.class);
 
-    public static final BeanPropertySet<Order> PROPERTIES =
-        BeanPropertySet.create(Order.class);
+// Preferred: use typed sub-types — they expose richer query expression APIs
+NumericProperty<Long>       ID         = PROPERTY_SET.propertyNumeric("id");
+StringProperty              STATUS     = PROPERTY_SET.propertyString("status");
+TemporalProperty<LocalDateTime> CREATED_AT = PROPERTY_SET.propertyTemporal("createdAt");
+BooleanProperty             ACTIVE     = PROPERTY_SET.propertyBoolean("active");
 
-    @Identifier
-    private Long id;
-    private String customerName;
-    private BigDecimal totalAmount;
-    private String status;
-    private LocalDateTime createdAt;
-
-    // getters / setters
-}
-```
-
-### Using BeanPropertySet for queries
-
-```java
-// Get the DataPath (table name) from the BeanPropertySet
-DataTarget<?> target = Order.PROPERTIES.getDataPath();   // → "order"
-
-// Reference a property by name (type-safe)
-PathProperty<String> statusProp = (PathProperty<String>)
-    Order.PROPERTIES.property("status");
-
-// Filter expression
-QueryFilter filter = statusProp.eq("PENDING");
+// Fallback when no typed sub-type exists (e.g. BigDecimal):
+PathProperty<BigDecimal>    TOTAL      = PROPERTY_SET.property("total", BigDecimal.class);
 ```
 
 ---
@@ -172,12 +181,12 @@ Always derive column names from the field `@DataPath` values when writing Flyway
 ## Full example
 
 ```java
-package com.example.ap.domain;
+package com.example.ap.bill;   // feature package — bean, service, and view all live here
 
-import com.holonplatform.core.beans.BeanPropertySet;
 import com.holonplatform.core.beans.DataPath;
 import com.holonplatform.core.beans.Identifier;
 import com.holonplatform.core.beans.NotNull;
+import com.holonplatform.core.beans.Sequence;
 import com.holonplatform.core.i18n.Caption;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -185,40 +194,46 @@ import java.time.LocalDateTime;
 @DataPath("bill")
 public class Bill {
 
-    public static final BeanPropertySet<Bill> PROPERTIES =
-        BeanPropertySet.create(Bill.class);
+    // No PROPERTIES constant here — it belongs in BillModel (the companion Model interface)
 
     @Identifier
     @DataPath("id")
+    @Sequence(1)
     @Caption(message = "ID", messageCode = "bill.id")
     private Long id;
 
     @NotNull
     @DataPath("vendor_name")
+    @Sequence(2)
     @Caption(message = "Vendor Name", messageCode = "bill.vendorName")
     private String vendorName;
 
     @NotNull
     @DataPath("invoice_number")
+    @Sequence(3)
     @Caption(message = "Invoice Number", messageCode = "bill.invoiceNumber")
     private String invoiceNumber;
 
     @NotNull
     @DataPath("invoice_date")
+    @Sequence(4)
     @Caption(message = "Invoice Date", messageCode = "bill.invoiceDate")
     private LocalDateTime invoiceDate;
 
     @NotNull
     @DataPath("total_amount")
+    @Sequence(5)
     @Caption(message = "Total Amount (USD)", messageCode = "bill.totalAmount")
     private BigDecimal totalAmount;
 
     @NotNull
     @DataPath("status")
+    @Sequence(6)
     @Caption(message = "Status", messageCode = "bill.status")
     private String status;          // "PENDING_REVIEW", "APPROVED", "REJECTED"
 
     @DataPath("purchase_order_id")
+    @Sequence(7)
     @Caption(message = "Purchase Order", messageCode = "bill.purchaseOrderId")
     private Long purchaseOrderId;
 

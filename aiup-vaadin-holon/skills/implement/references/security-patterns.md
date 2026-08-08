@@ -1,7 +1,7 @@
 # Security Patterns Reference (Holon Auth)
 
 All authentication and authorization in the Holon Platform + Vaadin Flow stack uses
-**Holon Auth** (`com.holon-platform.auth:holon-auth`). Never use Spring Security for
+**Holon Auth** (`com.holon-platform.core:holon-auth`). Never use Spring Security for
 business-level auth. Spring Security may appear only in filter-chain wiring if Holon Auth
 requires it, with a `// FALLBACK:` comment.
 
@@ -11,13 +11,15 @@ requires it, with a `// FALLBACK:` comment.
 
 | Concept | Holon class | Description |
 |---------|-------------|-------------|
-| Authentication | `com.holonplatform.auth.Authentication` | Represents the authenticated principal (username, roles, permissions) |
+| Authentication | `com.holonplatform.auth.Authentication` | Represents the authenticated principal (username, permissions) |
 | Authenticator | `com.holonplatform.auth.Authenticator` | Verifies credentials and produces an `Authentication` |
 | Realm | `com.holonplatform.auth.Realm` | Container for `Authenticator`s and `Authorizer`s |
-| Authorizer | `com.holonplatform.auth.Authorizer` | Checks whether an `Authentication` has a role or permission |
-| AuthContext | `com.holonplatform.auth.AuthContext` | Thread-bound holder of the current `Authentication`; access point for auth checks |
-| Permission | `com.holonplatform.auth.Permission` | An authorization unit, typically expressed as `"resource:action"` |
-| @Permitted | `com.holonplatform.auth.annotations.Permitted` | Annotation for route-level or method-level permission guards |
+| Authorizer | `com.holonplatform.auth.Authorizer` | Checks whether an `Authentication` has a permission |
+| AuthContext | `com.holonplatform.auth.AuthContext` | Context-bound holder of the current `Authentication`; main access point for auth checks |
+| Permission | `com.holonplatform.auth.Permission` | An authorization unit; string value obtainable via `permission.getPermission()` |
+| Account | `com.holonplatform.auth.Account` | Built-in user model with credentials and permissions; also factory for `Authenticator` |
+| AccountProvider | `com.holonplatform.auth.AccountProvider` | Functional interface: `accountId -> Optional<Account>` |
+| @Authenticate | `com.holonplatform.auth.annotations.Authenticate` | Annotation for route-level authentication guard |
 
 ---
 
@@ -28,68 +30,124 @@ The `Realm` is the single auth configuration point. Define it as a `@Bean` in a
 
 ```java
 import com.holonplatform.auth.Realm;
-import com.holonplatform.auth.Authenticator;
-import com.holonplatform.auth.Authorizer;
-import com.holonplatform.auth.keys.AccountCredentialsAuthenticator;
+import com.holonplatform.auth.Account;
+import com.holonplatform.auth.AccountProvider;
+import com.holonplatform.auth.Credentials;
+import com.holonplatform.auth.AuthContext;
 
 @Bean
 public Realm realm(AccountProvider accountProvider) {
     return Realm.builder()
-        .withAuthenticator(
-            AccountCredentialsAuthenticator.create(accountProvider))
-        .withAuthorizer(Authorizer.create())
-        .withDefaultAuthorization()
+        .withAuthenticator(Account.authenticator(accountProvider))  // correct factory method
+        .withDefaultAuthorizer()
         .build();
 }
 
-// AccountProvider example (loaded from Holon Auth tables in the database)
+// AccountProvider is a functional interface: accountId -> Optional<Account>
+// Implement it manually — there is no DatastoreAccountProvider in Holon Auth
 @Bean
-public AccountProvider accountProvider(Datastore ds) {
-    // Use Holon Auth JDBC AccountProvider backed by holon_account + holon_role + holon_permission tables
-    return DatastoreAccountProvider.create(ds);
+public AccountProvider accountProvider(Datastore datastore) {
+    return accountId -> {
+        // Query the account from the datastore
+        return datastore.query()
+            .target(DataTarget.named("app_account"))
+            .filter(DataPath.create("username").eq(accountId))
+            .findOne(BeanProjection.of(AppAccount.class))
+            .map(row -> Account.builder(accountId)
+                .enabled(true)
+                .credentials(Credentials.builder()
+                    .secret(row.getPasswordHash())
+                    .hashAlgorithm(Credentials.Encoder.BCRYPT.name())
+                    .build())
+                .withPermission("bills:view")        // assign permissions from the database row
+                .build());
+    };
+}
+
+// Make AuthContext available as a Vaadin session-scoped context resource
+@Bean
+@VaadinSessionScope
+public AuthContext authContext(Realm realm) {
+    return AuthContext.create(realm);
 }
 ```
 
 ---
 
-## Role and permission model
+## Permission model
 
-Define roles and their permissions in the `Realm` bootstrap or via the database
-(Holon Auth JDBC schema from `V0NN__auth_schema.sql`):
+Permissions are plain `String` values granted to each `Account` via the `AccountProvider`.
+Use the pattern `"resource:action"` (or a simple role name if preferred):
 
 ```
-Role: AP_REVIEWER
+Account: ap-reviewer
   permissions: bills:view, bills:submit
 
-Role: FINANCE_DIRECTOR
+Account: finance-director
   permissions: bills:view, bills:approve, bills:reject
 
-Role: RECEIVER
+Account: receiver
   permissions: bills:view, goods-receipts:confirm
 ```
 
-Permissions follow the pattern `"resource:action"`. Roles group permissions for
-assignment to users.
+The default `Authorizer` matches permissions by exact string equality.
 
 ---
 
-## Route-level guard (`@Permitted`)
+## Route-level authentication guard (`@Authenticate`)
+
+Use `@Authenticate` to require that the user is authenticated before accessing a route.
+Requires `holon-vaadin-flow-navigator` on the classpath and an `AuthContext` available as
+a context resource.
 
 ```java
-import com.holonplatform.auth.annotations.Permitted;
+import com.holonplatform.auth.annotations.Authenticate;
 import com.vaadin.flow.router.Route;
 
+@Authenticate                                   // any authenticated user may access this route
 @Route("bills")
-@Permitted("bills:view")            // user must have "bills:view" permission to access this route
 public class BillListView extends VerticalLayout { ... }
 
+@Authenticate(redirectURI = "login")            // redirect to "login" when not authenticated
 @Route("bills/approve")
-@Permitted({"bills:view", "bills:approve"})   // requires BOTH permissions
 public class BillApprovalView extends VerticalLayout { ... }
 ```
 
-Holon's Vaadin Flow integration enforces `@Permitted` before the view is rendered.
-Unauthorized access redirects to a login / access-denied view.
+`@Authenticate` can also be placed on a `RouterLayout` class to protect all child routes:
+
+```java
+@Authenticate
+public class MainLayout extends Div implements RouterLayout { }
+
+@Route(value = "bills", layout = MainLayout.class)
+public class BillListView extends VerticalLayout { ... }   // inherits @Authenticate
+```
+
+---
+
+## Route-level authorization guard (`@RolesAllowed`)
+
+Use `javax.annotation.security.RolesAllowed` to require that the authenticated user has
+**at least one** of the listed permission strings.
+
+```java
+import javax.annotation.security.RolesAllowed;
+import com.holonplatform.auth.annotations.Authenticate;
+import com.vaadin.flow.router.Route;
+
+@Authenticate
+@RolesAllowed("bills:view")                     // user must have "bills:view" permission
+@Route("bills")
+public class BillListView extends VerticalLayout { ... }
+
+@Authenticate
+@RolesAllowed({"bills:view", "bills:approve"})  // user must have "bills:view" OR "bills:approve"
+@Route("bills/approve")
+public class BillApprovalView extends VerticalLayout { ... }
+```
+
+Unauthorized access fires a `ForbiddenNavigationException`. The Holon Vaadin Flow
+navigator checks permissions against the current `AuthContext`.
 
 ---
 
@@ -97,33 +155,32 @@ Unauthorized access redirects to a login / access-denied view.
 
 ```java
 import com.holonplatform.auth.AuthContext;
+import com.holonplatform.auth.Authentication;
+import com.holonplatform.auth.Permission;
+
+// Obtain the current AuthContext from context (resolves from Vaadin session scope)
+AuthContext authContext = AuthContext.require();
 
 // Check a single permission
-if (AuthContext.require().isPermitted("bills:approve")) {
+if (authContext.isPermitted("bills:approve")) {
     approveButton.setVisible(true);
 }
 
-// Check a role
-if (AuthContext.require().isInRole("FINANCE_DIRECTOR")) {
-    financeOnlyPanel.setVisible(true);
+// Check multiple permissions (ALL must be granted)
+if (authContext.isPermitted("bills:view", "bills:approve")) {
+    financePanel.setVisible(true);
 }
 
-// Require a permission — throws AuthenticationException if not satisfied
-AuthContext.require().requirePermission("bills:approve");
-
 // Get the current authenticated principal name
-Optional<String> username = AuthContext.require()
-    .getAuthentication()
+Optional<String> username = authContext.getAuthentication()
     .map(Authentication::getName);
 
-// Get all roles of current user
-Set<String> roles = AuthContext.require()
-    .getAuthentication()
-    .map(auth -> auth.getParameters().stream()
-        .filter(p -> "role".equals(p.getName()))
-        .map(p -> p.getValue().toString())
-        .collect(Collectors.toSet()))
-    .orElse(Collections.emptySet());
+// Get all permissions of the current user
+Set<String> perms = authContext.requireAuthentication()
+    .getPermissions().stream()
+    .map(p -> p.getPermission().orElse(""))
+    .filter(s -> !s.isEmpty())
+    .collect(Collectors.toSet());
 ```
 
 ---
@@ -132,19 +189,20 @@ Set<String> roles = AuthContext.require()
 
 ```java
 // FALLBACK: only when a stateless REST API is required alongside the Vaadin UI
-// FALLBACK: no Holon equivalent for JWT generation without holon-auth-jwt
 import com.holonplatform.auth.jwt.JwtConfiguration;
 import com.holonplatform.auth.jwt.JwtAuthenticator;
+import com.holonplatform.auth.jwt.JwtSignatureAlgorithm;
 
-JwtConfiguration jwtConfig = JwtConfiguration.build()
+JwtConfiguration jwtConfig = JwtConfiguration.builder()
     .issuer("my-app")
-    .sharedKeyAlgorithm("HmacSHA256", secretKeyBytes)
+    .signatureAlgorithm(JwtSignatureAlgorithm.HS256)
+    .sharedKey(secretKeyBytes)
     .build();
 
 Realm realmWithJwt = Realm.builder()
     .withAuthenticator(JwtAuthenticator.builder().configuration(jwtConfig).build())
-    .withAuthenticator(AccountCredentialsAuthenticator.create(accountProvider))
-    .withAuthorizer(Authorizer.create())
+    .withAuthenticator(Account.authenticator(accountProvider))
+    .withDefaultAuthorizer()
     .build();
 ```
 
@@ -170,8 +228,11 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 ## Pre-Emit Checklist (security)
 
-- [ ] Every `@Route` view that requires authentication has `@Permitted` annotation
-- [ ] Action buttons that require specific permissions check `AuthContext.require().isPermitted(...)` and set `setVisible(false)` if not permitted
+- [ ] Every `@Route` view that requires authentication has `@Authenticate` annotation
+- [ ] Every `@Route` view that requires specific permissions has `@RolesAllowed` annotation
+- [ ] Action buttons that require specific permissions check `authContext.isPermitted(...)` and call `setVisible(false)` if not permitted
 - [ ] No `org.springframework.security.*` imports except in filter-chain wiring + `// FALLBACK:` comment
-- [ ] `Realm` `@Bean` is present and configures all required roles / permissions
-- [ ] Role/permission names in `@Permitted` match the names in the `Realm` bootstrap exactly
+- [ ] `Realm` `@Bean` uses `Account.authenticator(accountProvider)` (not `AccountCredentialsAuthenticator`)
+- [ ] `AccountProvider` is a hand-written lambda — no `DatastoreAccountProvider` exists in Holon Auth
+- [ ] `AuthContext` is available as a context resource (e.g. `@VaadinSessionScope` bean)
+- [ ] Permission strings in `@RolesAllowed` match those granted in `AccountProvider` exactly

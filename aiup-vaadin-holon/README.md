@@ -115,7 +115,7 @@ See [`rules/holon-stack.md`](rules/holon-stack.md) for the full allow/ban list.
 ### Allowed
 
 - `com.holon-platform.*` — all Holon modules
-- `com.vaadin.*` — **fallback only**, justified inline with `// FALLBACK: no Holon equivalent for <thing>`
+- `com.vaadin.*` — **BANNED** for UI components; if no Holon equivalent exists, stop and ask the developer
 - `org.springframework.boot:spring-boot-starter` + `holon-spring-boot-*` starters
 - `org.springframework.stereotype.{Service,Component,Repository}` — only when Spring lifecycle is required; Holon `Context` preferred; constructor injection
 - `org.flywaydb.*`, `org.postgresql.*`, `org.junit.jupiter.*`, `org.testcontainers.*`, `com.microsoft.playwright.*`

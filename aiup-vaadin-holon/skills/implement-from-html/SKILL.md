@@ -36,7 +36,10 @@ confirmation before proceeding.
 ### Allowed
 
 - `com.holon-platform.*` — all Holon modules
-- `com.vaadin.*` — **fallback only**, every use must be preceded by `// FALLBACK: no Holon equivalent for <thing>`
+- Data grids: `Components.listing(T.class)` (→ `ListingBundleBuilder<T>`); forms: `EntityFormPanel.bean(T.class)` from `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel`
+- Buttons: `ButtonBuilder.create()` from `com.holonplatform.vaadin.flow.components.builders.ButtonBuilder` with semantic variants (`.primary()`, `.error()`, etc.)
+- Notifications: `NotificationUtil` or `NotificationBuilder` — both are Holon classes
+- Confirmation dialogs: `AlertDialog.builder()` from `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog`
 - `org.springframework.boot:spring-boot-starter` + Holon Spring Boot starters (bootstrap only)
 - `org.springframework.stereotype.{Service,Component,Repository}` — permitted when the class needs Spring lifecycle; Holon `Context` still preferred; inject via constructors
 - `org.flywaydb.*`, `org.postgresql.*`, `org.junit.jupiter.*`, `org.testcontainers.*`, `com.microsoft.playwright.*`
@@ -56,11 +59,15 @@ confirmation before proceeding.
 - [ ] At least one data region (master list or form) identified
 - [ ] Entity fields inferred with types and names documented
 - [ ] Roles / permissions inferred and documented
-- [ ] HTML → Holon component mapping table completed (see Step 4)
-- [ ] UI strings extracted to Holon i18n keys (no Vaadin `I18NProvider` / `getTranslation(...)`)
+- [ ] **Use case document written to `docs/use_cases/UC-XXX-*.md`** (Step 2b completed)
+- [ ] HTML → Holon component mapping table completed using exact class names from `references/html-mapping.md` (see Step 4)
+- [ ] **Feature packages**: every generated class lives in `com.example.<app>.<feature>` (e.g. `customer`, `invoice`); only the app shell lives in a `shared` package — no `domain/`, `service/`, or `ui/` layer packages
+- [ ] **I18N**: every user-visible string uses `Localizable.of("<fallback>", "<domain>.<key>")` — **no raw `String` literals** in `.text(...)`, `.label(...)`, `.placeholder(...)`, `.helperText(...)`, `.required(...)`, notification messages, or section titles; keys must match entries in `messages.properties`
+- [ ] **`@Caption`**: every user-visible bean field carries `@Caption(message = "<fallback>", messageCode = "<domain>.<field>")` — labels in `EntityPanelForm` and `ListingBundle` are resolved automatically from these annotations
+- [ ] **A11Y**: every input has `.label(Localizable.of(...))`, icon-only buttons have `.ariaLabel(Localizable.of(...))`, `ListingBundle` has `.ariaLabel(...)`, form sections are identified by a heading with correct `h` rank, `MainLayout` contains a skip-to-content link, dialogs restore focus on close
 - [ ] No `PropertyBox` in emitted code
 - [ ] No `@Autowired` — dependencies injected via constructors (`@Service`/`@Component`/`@Repository` only when Spring lifecycle is required)
-- [ ] Every raw Vaadin fallback has `// FALLBACK: no Holon equivalent for <thing>`
+- [ ] **Component inventory**: before emitting, verify every region maps to an exact Holon class from `references/component-dictionary.md`; for any region with ⚠️ **stop and ask the developer** — never silently emit raw Vaadin (`com.vaadin.flow.component.*`) or unofficial helper classes (e.g. `EntityFormPanel`, `NotificationUtil`) without an explicit `// FALLBACK:` comment approved by the developer
 - [ ] Auth guard on every `@Route` that requires a role
 - [ ] Full compilation verified
 
@@ -90,6 +97,38 @@ Use [`references/entity-inference.md`](references/entity-inference.md):
 
 Document the inferred entity model in a `docs/entity_model.md` fragment before writing code.
 
+### Step 2b: Write or update the use case document
+
+Before writing any code, produce or update a use case specification document in
+`docs/use_cases/` using the same format and rules as the `/use-case-spec` skill.
+
+**File naming** — derive from the inferred entity and primary action:
+`docs/use_cases/UC-XXX-<kebab-case-feature-name>.md`
+
+- If a `docs/use_cases/` directory already exists, scan it for the highest `UC-XXX` ID
+  and assign the next number. If a file for this feature already exists (by ID or name
+  match), **update it** rather than creating a new one.
+- If no `docs/use_cases/` exists, start at `UC-001`.
+
+**Derive the use case content from the HTML evidence:**
+
+| Use case section | Derived from |
+|-----------------|--------------|
+| **Primary actor** | User chip / role badge with the most permissions (Step 3 role matrix) |
+| **Goal** | The dominant action in the appbar / page title (e.g. "Manage Bills") |
+| **Preconditions** | Login required (inferred if auth buttons are present); data from other features already loaded |
+| **Main Success Scenario** | One step per distinct action button (Submit, Save, Approve, Reject …) framed at business level — no implementation details |
+| **Alternative flows** | Disabled / conditional buttons → restricted-permission flows; form validation errors → validation flow |
+| **Postconditions** | Records saved / status changed (inferred from button labels and form fields) |
+| **Business rules** | Mandatory fields (`required` attr, asterisks), status transition constraints, role restrictions on buttons |
+
+**Rules (same as `/use-case-spec`):**
+- No HTTP verbs, SQL, class names, or protocol terms in steps.
+- Every alternative flow ends with `Use case continues at step N.` or `Use case ends.`
+- `BR-XXX` IDs do not restart if this file is added alongside existing use case files.
+
+After writing the file, state its path before continuing to Step 3.
+
 ### Step 3: Infer roles and permissions
 
 Use [`references/role-inference.md`](references/role-inference.md):
@@ -115,10 +154,10 @@ Use [`references/html-mapping.md`](references/html-mapping.md) to select the Hol
 | Dropdown / select | `Components.input.singleSelect(String.class).items(...).build()` |
 | Checkbox | `Components.input.boolean_().label("...").build()` |
 | Button | `Components.button().text("...").onClick(...).build()` |
-| Tab bar | `// FALLBACK: no Holon equivalent for Tabs` + `com.vaadin.flow.component.tabs.Tabs` |
-| Sidenav | `// FALLBACK: no Holon equivalent for SideNav` + `com.vaadin.flow.component.sidenav.SideNav` |
-| Appbar | `// FALLBACK: no Holon equivalent for AppLayout` + `com.vaadin.flow.component.applayout.AppLayout` |
-| Notification | `// FALLBACK: no Holon equivalent for error-themed Notification` + `com.vaadin.flow.component.notification.Notification` |
+| Tab bar | ⚠️ No Holon equivalent — **stop and ask the developer** what component to use |
+| Sidenav | ⚠️ No Holon equivalent — **stop and ask the developer** what component to use |
+| Appbar | ⚠️ No Holon equivalent — **stop and ask the developer** what component to use |
+| Notification | ⚠️ No Holon equivalent — **stop and ask the developer** what component to use |
 
 ### Step 5: Extract CSS / theme tokens
 
@@ -132,26 +171,37 @@ Use [`references/css-extraction.md`](references/css-extraction.md):
 
 ### Step 5b: Extract UI copy to Holon i18n keys
 
-- Extract all user-visible copy (field labels, button text, notifications, dialog captions)
-  into domain-scoped message keys (e.g. `bill.vendorName`, `bill.approve`).
-- Use Holon i18n conventions for generated snippets (key + fallback text).
+- Extract **every** user-visible string (field labels, button text, section titles, placeholder text, helper text, validation messages, notification messages, page titles) into domain-scoped message keys (e.g. `crm.customer.name.caption`, `crm.action.saveCustomer`).
+- Add every key to `src/main/resources/messages.properties` with a English fallback value.
+- In Java, always use `Localizable.of("<fallback>", "<key>")` at the call site:
+  ```java
+  // ✅ correct
+  Components.button().text(Localizable.of("Save customer", "crm.action.saveCustomer")).build();
+  // ❌ wrong — raw string literal
+  Components.button().text("Save customer").build();
+  ```
+- Section / card titles passed to helper methods must also be `Localizable` or looked up via `LocalizationContext.require().getMessage(key, fallback)`.
 - Do NOT introduce Vaadin i18n wiring (`I18NProvider`, `UI.getCurrent().getTranslation(...)`).
 
 ### Step 6: Implement (same layers as `/implement`)
 
+**Feature-package rule**: determine the feature name from the inferred entity (e.g. `customer`, `invoice`). Every class produced below goes in `com.example.<app>.<feature>`. Shared infrastructure (app shell, security config) goes in `com.example.<app>.shared`. **Never create `domain/`, `service/`, or `ui/` layer packages.**
+
 Produce, in order:
 
-1. **Domain** — JavaBean(s) with `@DataPath` / `@Identifier`, `BeanPropertySet<T>` constants
-2. **Service** — Datastore-backed service class (Context-wired)
-3. **Security** — `Realm` bootstrap with inferred roles / permissions
-4. **Migrations** — Flyway `V*.sql` for the inferred entity model + auth schema scaffold
-5. **Views** — Holon Vaadin Flow views (`@Route`, `PropertyListing`, `PropertyForm`, Holon Auth guards)
-6. **I18N** — Holon i18n message resources for all extracted UI copy
-7. **Theme** — `src/main/resources/META-INF/resources/themes/<app-name>/styles.css` with Lumo token overrides; `MainLayout` loads it via `@StyleSheet("context://themes/<app-name>/styles.css")`
+1. **Use case document** (already written in Step 2b — verify it exists before continuing)
+2. **Domain** — JavaBean(s) with `@DataPath` / `@Identifier`, `@Caption(message, messageCode)` on every user-visible field, `@NotNull` on required fields; `BeanPropertySet<T>` constants — all in `com.example.<app>.<feature>`
+3. **Service** — Datastore-backed service class (Context-wired) — in `com.example.<app>.<feature>`
+4. **Security** — `Realm` bootstrap with inferred roles / permissions
+5. **Migrations** — Flyway `V*.sql` for the inferred entity model + auth schema scaffold
+6. **Views** — Holon Vaadin Flow views (`@Route`, `ListingBundle`, `EntityPanelForm`, Holon Auth guards, all strings via `Localizable.of(...)`) — in `com.example.<app>.<feature>`; before emitting each UI component, verify it is in `references/component-dictionary.md`; for any ⚠️ region, stop and ask
+7. **I18N** — Holon i18n message resources for all extracted UI copy (`messages.properties`)
+8. **Theme** — `src/main/resources/META-INF/resources/themes/<app-name>/styles.css` with Lumo token overrides; `MainLayout` loads it via `@StyleSheet("context://themes/<app-name>/styles.css")`
 
-### Step 7: Emit file tree summary
+### Step 8: Emit file tree summary
 
 After generating, print a summary of the emitted files so the user can verify scope.
+The summary MUST include the use case document written in Step 2b.
 
 ## Error conditions
 

@@ -1,767 +1,486 @@
-# Holon ↔ Vaadin Component Dictionary (I18N + A11Y)
+# Holon Vaadin Flow — Component Dictionary (Real API)
 
-This dictionary is the authoritative lookup for every UI component used in the
-Holon Platform + Vaadin Flow stack. For **every** component entry:
-
-- **I18N column** shows the Holon i18n wiring (never Vaadin `I18NProvider` / `getTranslation`).
-- **A11Y column** lists the mandatory accessibility requirements that each component must
-  satisfy before code is emitted.
+> **Source of truth**: derived directly from the Holon Vaadin Flow library source at
+> `com.holonplatform.vaadin.flow.vaadinplus.components.*` (verified August 2026).
+> Every snippet below compiles against the real library. Do **not** invent methods.
 
 Skills MUST consult this file when choosing a component. If a Holon component exists for
-the job, use it. Raw Vaadin is a fallback only (comment required).
+the job, use it. If **no Holon component exists**, **stop immediately and ask the developer**
+what component or approach to use — do not silently emit raw Vaadin.
+
+---
+
+## Package map
+
+| Concern | Class / entry point |
+|---------|-------------------|
+| Fluent input builders | `com.holonplatform.vaadin.flow.components.Input` |
+| Button builder | `com.holonplatform.vaadin.flow.components.builders.ButtonBuilder` |
+| Button group | `Components.buttonGroup()` → `ButtonGroup` |
+| Form layout builder | `com.holonplatform.vaadin.flow.components.builders.FormLayoutBuilder` |
+| Form section (titled) | `FormSection.of("Title", fields...)` |
+| Notification builder | `com.holonplatform.vaadin.flow.components.builders.NotificationBuilder` |
+| Notification shortcuts | `com.holonplatform.vaadin.flow.components.utils.NotificationUtil` |
+| Data grid / listing | `Components.listing(T.class)` → `ListingBundleBuilder<T>` |
+| Entity form (bean) | `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel` |
+| Multi-step creation page | `Components.entityCreationForm()` + `Components.formStepCard()` |
+| Multi-step wizard panel | `WizardFrame.builder()` → `WizardFrame` |
+| Inline progress stepper | `Components.stepper()` → `FlowStepper` |
+| Confirmation dialog | `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog` |
+| Modal alert notification | `Components.alertModal()` → `AlertModal` |
+| Inline alert | `com.holonplatform.vaadin.flow.vaadinplus.components.Alert` |
+| Empty state | `Components.empty()` → `Empty` |
+| Slide-in panel | `Components.sheet()` → `Sheet` |
+| Application shell | `Components.appShell()` → `AppShellLayout` |
+| App bar (top navigation) | `com.holonplatform.vaadin.flow.vaadinplus.components.AppBar` |
+| Page header | `Components.header(title)` → `Header` |
+| Page footer | `Components.footer()` → `Footer` |
+| Grid / list header | `Components.gridHeader(title)` → `GridHeader` |
+| Breadcrumb navigation | `Components.breadcrumb()` → `Breadcrumb` |
+| Side nav builder | `com.iyensoft.vaadin.flow.components.builders.SideNavBuilder` |
+| Responsive layout | `com.holonplatform.vaadin.flow.vaadinplus.ResponsiveDiv` |
+| Master-detail | `Components.masterDetail(T.class)` → `MasterDetailLayout<T>` |
+| Separator / divider | `Components.separator()` → `Separator` |
+| Status pill badge | `Components.statusBadge(label, variant)` → `StatusBadge` |
+| Icon badge (round tinted) | `Components.iconBadge(icon, variant)` → `IconBadge` |
+| Tag (label chip) | `new Tag(text)` or `new Tag(VaadinIcon, text)` |
+| Filter chip group | `Components.chipGroup()` → `ChipGroup` with `Chip` items |
+| Input group (addons) | `Components.inputGroup()` → `InputGroup` + `InputGroupText` |
+| OTP input | `Components.inputOTP()` → `InputOTP` |
+| KPI / metric card | `Components.highlight(heading, value)` → `Highlight` |
+| Live preview sidebar card | `Components.livePreviewCard(eyebrow)` → `LivePreviewCard` |
+| Progress checklist | `Components.checklistPanel()` → `ChecklistPanel` |
+| Sticky action bar | `Components.stickyActionBar()` → `StickyActionBar` |
+| Timeline / audit log | `Components.timelineStepper()` → `TimelineStepper` |
+| Carousel / slideshow | `Components.carousel()` → `Carousel` |
+| Transfer list (shuttle) | `TransferList.builder()` → `TransferList` |
+| Bulk item picker dialog | `BulkItemPickerDialog.builder()` → `BulkItemPickerDialog` |
+| Inline spreadsheet (PO lines) | `Components.lineItemGrid()` → `LineItemGrid` |
+| Dynamic query filter builder | `DynamicFilterPanel.of(MyBean.class)` → `DynamicFilterPanel<T>` |
 
 ---
 
 ## Quick-reference table
 
-| Job | **Holon component** | Vaadin fallback | Notes |
-|-----|---------------------|-----------------|-------|
-| Single-line text input | `Components.input.string()` | `TextField` | Prefer Holon |
-| Password input | `Components.input.password()` | `PasswordField` | Prefer Holon |
-| Integer number | `Components.input.integer()` | `IntegerField` | Prefer Holon |
-| Decimal number | `Components.input.bigDecimal()` | `BigDecimalField` / `NumberField` | Prefer Holon |
-| Local date | `Components.input.localDate()` | `DatePicker` | Prefer Holon |
-| Local date-time | `Components.input.localDateTime()` | `DateTimePicker` | Prefer Holon |
-| Boolean / checkbox | `Components.input.boolean_()` | `Checkbox` | Prefer Holon |
-| Single-select combo | `Components.input.singleSelect(T)` | `ComboBox<T>` | Prefer Holon |
-| Multi-select | `Components.input.multiSelect(T)` | `MultiSelectComboBox<T>` | Prefer Holon |
-| Text area | `Components.input.string().multiLine()` | `TextArea` | Prefer Holon |
-| Email | `Components.input.string()` + `.validator(EmailValidator)` | `EmailField` | FALLBACK if native email input is needed |
-| Data grid / table | `ListingBundle<T>` | `Grid<T>` | Prefer Holon |
-| Entity form (create/edit) | `EntityPanelForm<T>` | `FormLayout` + `Binder<T>` | Prefer Holon |
-| Action button | `Components.button()` | `Button` | Prefer Holon |
-| Upload | — | `Upload` | FALLBACK — no Holon equivalent |
-| Confirm dialog | — | `ConfirmDialog` | FALLBACK — no Holon equivalent |
-| Notification (success) | — | `Notification` | FALLBACK — no Holon Notification API |
-| Navigation shell | — | `AppLayout` + `SideNav` | FALLBACK — no Holon equivalent |
-| Responsive form container | — | `FormLayout` + `setResponsiveSteps()` | FALLBACK — no Holon equivalent |
-| Tabs | — | `Tabs` + `Tab` | FALLBACK — no Holon equivalent |
-| Avatar / icon | — | `Avatar` / `Icon` | FALLBACK — no Holon equivalent |
+| Job | **Correct Holon API** | No Holon equivalent |
+|-----|-----------------------|---------------------|
+| Single-line text | `Input.string()` | — |
+| Multi-line text area | `Input.stringArea()` | — |
+| Integer | `Input.number(Integer.class)` | — |
+| Decimal / BigDecimal | `Input.number(Double.class)` or `Input.number(BigDecimal.class)` | — |
+| Local date | `Input.localDate()` | — |
+| Local date-time | `Input.localDateTime()` | — |
+| Local time | `Input.localTime()` | — |
+| Boolean checkbox | `Input.boolean_()` | — |
+| Boolean toggle/switch | `Input.boolean_().styleName("switch")` | — |
+| Filterable combo (single) | `Input.singleSelect(String.class).items(...)` | — |
+| Enum select | `Input.enumSelect(MyEnum.class)` | — |
+| Radio buttons | `Input.singleOptionSelect(String.class).items(...)` | — |
+| List box (single) | `Input.singleListSelect(String.class).items(...)` | — |
+| Checkbox group (multi) | `Input.multiOptionSelect(String.class).items(...)` | — |
+| Multi list box | `Input.multiListSelect(String.class).items(...)` | — |
+| OTP / PIN input | `Components.inputOTP().group(3).separator().group(3).onComplete(...).build()` | — |
+| Input with addons (prefix/suffix) | `Components.inputGroup()` + `InputGroupText` | — |
+| Action button | `ButtonBuilder.create().text("...").primary().build()` | — |
+| Segmented / toggle button group | `Components.buttonGroup().content(...).build()` | — |
+| Form layout | `FormLayoutBuilder.create().responsiveSteps(...).add(...).build()` | — |
+| Titled form section | `FormSection.of("Title", field1, field2)` | — |
+| Entity form (CRUD) | `EntityFormPanel.bean(MyBean.class)...noFooter().build()` | — |
+| Multi-step creation page | `Components.entityCreationForm()` + `Components.formStepCard()` | — |
+| Multi-step wizard (embedded) | `WizardFrame.builder().step("Label", panel).onFinish(...).build()` | — |
+| Step progress indicator | `Components.stepper().steps(...).currentStep(0).build()` | — |
+| Data grid | `Components.listing(T.class).columns(...).fetch(...).build()` | — |
+| Dynamic query filter | `DynamicFilterPanel.of(MyBean.class)` | — |
+| Inline document lines grid | `Components.lineItemGrid().withItemSuggestion(...).build()` | — |
+| Transfer list (shuttle) | `TransferList.builder().availableItems(...).onTransfer(...).build()` | — |
+| Bulk item picker dialog | `BulkItemPickerDialog.builder().items(...).onConfirm(...).build().open()` | — |
+| Notification (quick) | `NotificationUtil.notificationSuccess("...")` | — |
+| Notification (builder) | `NotificationBuilder.create().text("...").success().build().open()` | — |
+| Confirmation dialog | `AlertDialog.builder().title("...").onConfirm(()->...).open()` | — |
+| Modal alert notification | `Components.alertModal(Alert.Variant.SUCCESS).title("...").build().open()` | — |
+| Inline alert | `Alert.builder(Alert.Variant.WARNING).title("...").build()` | — |
+| Empty state | `Components.empty().icon(...).title("...").description("...").build()` | — |
+| Slide-in panel (Sheet) | `Components.sheet(Sheet.Side.RIGHT).title("...").content(...).build()` | — |
+| Stacked sheets | `Components.sheetStack(Sheet.Side.RIGHT)` | — |
+| KPI metric card | `Components.highlight(heading, value)` → `Highlight` | — |
+| Status pill | `Components.statusBadge("Posted", StatusBadge.Variant.SUCCESS)` | — |
+| Round icon badge | `Components.iconBadge(VaadinIcon.CHECK.create(), Alert.Variant.SUCCESS)` | — |
+| Tag (label chip) | `new Tag(VaadinIcon.CLOCK, Localizable.of("Draft", "tag.draft"))` | — |
+| Filter chip group | `ChipGroup.create().addChip(Chip.of("All", 10), true).onSelect(...).build()` | — |
+| Audit log / timeline | `Components.timelineStepper().pageSize(20).onLoadMore(...).build()` | — |
+| Carousel / slideshow | `Components.carousel().items(...).loop(true).build()` | — |
+| Sidebar progress checklist | `Components.checklistPanel()` + `addItem("Step", "hint", ItemState.PENDING)` | — |
+| Live preview sidebar card | `Components.livePreviewCard("Live preview")` → `LivePreviewCard` | — |
+| Sticky action bar | `Components.stickyActionBar()` → `StickyActionBar` | — |
+| Visual separator | `Components.separator().build()` (horizontal) / `.orientation(VERTICAL)` | — |
+| App shell | `Components.appShell().navbarBrand("...").nav(nav).build()` | — |
+| Top app bar | `new AppBar()` with `.addToStart()` / `.addToEnd()` / `.addToBottom()` | — |
+| Page header | `Components.header("Title")` → `Header` (with breadcrumb, tabs, actions) | — |
+| Page footer | `Components.footer()` → `Footer` (brand / navigation / actions / legal) | — |
+| Grid header (with selection) | `Components.gridHeader("Title")` → `GridHeader` | — |
+| Breadcrumb navigation | `Components.breadcrumb()` → `Breadcrumb` with `BreadcrumbItem` / `BreadcrumbPage` | — |
+| Side nav | `SideNavBuilder.create().withNavItem(...).add().buildWrapper()` | — |
+| Responsive slots | `ResponsiveDiv.configure(this).slotOnce(ViewMode.DESKTOP, ()->...).build()` | — |
+| Master-detail | `Components.masterDetail(T.class)` → `MasterDetailLayout<T>` | — |
+| File upload | — | ⚠️ **Stop and ask the developer** |
+| Rich-text editor | — | ⚠️ **Stop and ask the developer** |
+
+> ⛔ **Common wrong names**: `Components.input.string()` → wrong; `EntityPanelForm` → wrong;
+> `ListingBundle.builder(PROPERTIES)` → wrong; `Components.input.bigDecimal()` → wrong.
+> Use only the correct APIs listed above.
 
 ---
 
 ## Component entries
 
-### 1 · String / text input
+> ⛔ **Raw strings are forbidden** in any user-visible text. Every `.label()`, `.text()`, `.placeholder()`,
+> `.required()`, `.title()`, `.description()`, `.cancelText()`, `.confirmText()`, `.search()`, and `.ariaLabel()`
+> call **must** use `Localizable.of("fallback", "message.key")`. All keys must exist in `messages.properties`.
 
-**Holon:** `Components.input.string()`  
-**Vaadin fallback:** `TextField`
-
-#### I18N
+### 1 · Text inputs
 
 ```java
-// key: <domain>.<field>, fallback shown inline for readability
-Input<String> nameInput = Components.input.string()
-    .label(Localizable.of("Customer Name", "<domain>.customerName"))  // Holon i18n key
-    .placeholder(Localizable.of("Enter full name", "<domain>.customerName.placeholder"))
-    .helperText(Localizable.of("Max 200 characters", "<domain>.customerName.helper"))
-    .required(Localizable.of("Customer name is required", "validation.required.customerName"))
+// Single-line — com.holonplatform.vaadin.flow.components.Input
+Input<String> name = Input.string()
+    .label(Localizable.of("Account name",      "crm.customer.name"))
+    .placeholder(Localizable.of("Enter name",  "crm.customer.name.placeholder"))
+    .helperText(Localizable.of("Max 200 characters", "crm.customer.name.helper"))
+    .required(Localizable.of("Name is required", "crm.customer.name.required"))
     .maxLength(200)
     .build();
-```
 
-> Key format: `<domain>.<fieldName>` (e.g. `order.customerName`).
-> Every `Localizable.of(fallback, key)` pair is resolved at runtime via the Holon
-> `LocalizationContext`; the fallback string is shown when no translation is loaded.
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Visible label | Always call `.label(...)` — never use a placeholder as the only label |
-| Required indicator | `.required(...)` — Holon sets `aria-required="true"` automatically |
-| Helper / hint text | `.helperText(...)` — linked to the field via `aria-describedby` by Vaadin |
-| Error messages | `.withValidator(...)` — Vaadin surfaces validation messages as `role="alert"` |
-| Min / max length hint | Include in helper text; set `.maxLength(n)` for browser-level enforcement |
-
----
-
-### 2 · Password input
-
-**Holon:** `Components.input.password()`  
-**Vaadin fallback:** `PasswordField`
-
-#### I18N
-
-```java
-Input<String> pwdInput = Components.input.password()
-    .label(Localizable.of("Password", "auth.password"))
-    .placeholder(Localizable.of("Enter password", "auth.password.placeholder"))
-    .required(Localizable.of("Password is required", "validation.required.password"))
+// Multi-line text area
+Input<String> notes = Input.stringArea()
+    .label(Localizable.of("Internal notes",            "crm.customer.notes"))
+    .placeholder(Localizable.of("Anything your team should know…", "crm.customer.notes.placeholder"))
     .build();
 ```
 
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Visible label | Always call `.label(...)` |
-| Toggle visibility button | Vaadin `PasswordField` renders a reveal button with `aria-label="Show password"` automatically; the Holon wrapper preserves it |
-| Autocomplete hint | Set `autocomplete` attribute: `pwdInput.getComponent().getElement().setAttribute("autocomplete", "current-password")` |
+**A11Y**: always call `.label(...)` — never rely on placeholder alone; `.required(msg)` sets `aria-required` automatically.
 
 ---
 
-### 3 · Integer input
-
-**Holon:** `Components.input.integer()`  
-**Vaadin fallback:** `IntegerField`
-
-#### I18N
+### 2 · Number inputs
 
 ```java
-Input<Integer> qtyInput = Components.input.integer()
-    .label(Localizable.of("Quantity", "order.quantity"))
-    .helperText(Localizable.of("Minimum 1", "order.quantity.helper"))
-    .required(Localizable.of("Quantity is required", "validation.required.quantity"))
-    .min(1)
+Input<Integer>    qty    = Input.number(Integer.class).label(Localizable.of("Employees",    "crm.customer.employees")).build();
+Input<Double>     price  = Input.number(Double.class).label(Localizable.of("Price",         "crm.product.price")).build();
+Input<BigDecimal> amount = Input.number(BigDecimal.class).label(Localizable.of("Credit limit", "crm.customer.creditLimit")).build();
+```
+
+---
+
+### 3 · Date / time inputs
+
+```java
+Input<LocalDate>     date = Input.localDate().label(Localizable.of("First contact date", "crm.customer.firstContactDate")).build();
+Input<LocalDateTime> dt   = Input.localDateTime().label(Localizable.of("Created at",          "crm.common.createdAt")).build();
+Input<LocalTime>     time = Input.localTime().label(Localizable.of("Start time",              "crm.common.startTime")).build();
+```
+
+---
+
+### 4 · Boolean / toggle
+
+```java
+// Standard checkbox
+Input<Boolean> active = Input.boolean_().label(Localizable.of("Active", "crm.common.active")).build();
+
+// Toggle switch (CSS class "switch")
+Input<Boolean> sync = Input.boolean_().label(Localizable.of("Sync with LinkedIn", "crm.customer.syncLinkedIn")).styleName("switch").build();
+```
+
+---
+
+### 5 · Select inputs
+
+```java
+// Filterable single-select (ComboBox)
+Input<String> industry = Input.singleSelect(String.class)
+    .items("Design & Creative", "Healthcare", "Technology")
+    .label(Localizable.of("Industry", "crm.customer.industry"))
+    .build();
+
+// Enum select — @Caption on enum constants drives item labels automatically
+Input<Status> status = Input.enumSelect(Status.class).label(Localizable.of("Status", "crm.common.status")).build();
+
+// Radio buttons (single-option select)
+Input<String> segment = Input.singleOptionSelect(String.class)
+    .items("SMB", "Mid-market", "Enterprise")
+    .label(Localizable.of("Segment", "crm.customer.segment"))
+    .build();
+
+// Checkbox group (multi-option select)
+Input<Set<String>> perms = Input.multiOptionSelect(String.class)
+    .items("Read", "Write", "Delete")
+    .label(Localizable.of("Permissions", "crm.user.permissions"))
     .build();
 ```
 
-#### A11Y
+---
 
-| Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` |
-| Min/max boundaries | `.min(n)` / `.max(n)` — Vaadin sets `aria-valuemin` / `aria-valuemax` on the underlying `input[type=number]` |
-| Units | Include unit in label or helper text (e.g. "Quantity (units)") |
+### 6 · Buttons
+
+```java
+// com.holonplatform.vaadin.flow.components.builders.ButtonBuilder
+var save = ButtonBuilder.create()
+    .text(Localizable.of("Save customer", "crm.action.save"))
+    .primary()
+    .onClick(e -> handleSave())
+    .build();
+
+var delete = ButtonBuilder.create().text(Localizable.of("Delete", "crm.action.delete")).error().build();
+var cancel = ButtonBuilder.create().text(Localizable.of("Cancel", "crm.action.cancel")).tertiary().build();
+
+// Icon-only — ariaLabel is mandatory (screen readers); it must also be localizable
+var searchBtn = ButtonBuilder.create()
+    .icon(VaadinIcon.SEARCH)
+    .icon()
+    .ariaLabel(Localizable.of("Search", "crm.action.search"))
+    .build();
+
+// Pre-configured delete preset
+var del = ButtonBuilder.create().preset(ButtonPreset.DELETE).onClick(e -> ...).build();
+```
+
+Variants: `.primary()` · `.secondary()` · `.tertiary()` · `.error()` · `.success()` · `.contrast()`  
+Sizes: `.small()` · `.normal()` · `.large()`  
+Shortcut: `Components.button().text("Save").primary().build()` (delegates to `ButtonBuilder`).
 
 ---
 
-### 4 · Decimal / BigDecimal input
-
-**Holon:** `Components.input.bigDecimal()`  
-**Vaadin fallback:** `BigDecimalField` / `NumberField`
-
-#### I18N
+### 7 · Form layout
 
 ```java
-Input<BigDecimal> amountInput = Components.input.bigDecimal()
-    .label(Localizable.of("Total Amount (USD)", "invoice.totalAmount"))
-    .helperText(Localizable.of("Enter amount in dollars", "invoice.totalAmount.helper"))
-    .required(Localizable.of("Amount is required", "validation.required.totalAmount"))
+// com.holonplatform.vaadin.flow.components.builders.FormLayoutBuilder
+var layout = FormLayoutBuilder.create()
+    .responsiveSteps(
+        new ResponsiveStep("0",     1),   // mobile
+        new ResponsiveStep("500px", 2),   // tablet
+        new ResponsiveStep("900px", 3))   // desktop
+    .add(firstName, lastName, email)
+    .add(2, address)                      // spans 2 columns
     .build();
 ```
 
-#### A11Y
+---
 
-| Rule | Implementation |
-|------|----------------|
-| Visible label with currency/unit | Include currency or unit in the label text |
-| Locale-aware formatting | Holon uses the active `LocalizationContext` locale; ensure `LocalizationContext` is configured for the user's locale |
+### 8 · EntityFormPanel (entity form / CRUD)
+
+> **Class name**: `EntityFormPanel` — from `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel`  
+> **Not** `EntityPanelForm`. **Not** `EntityFormPanel.builder(...)`. Entry point: `EntityFormPanel.bean(MyBean.class)`.
+
+```java
+EntityFormPanel<Customer> form = EntityFormPanel.bean(Customer.class)
+    .properties("name", "industry", "street", "city", "country")
+    .autoLabels(true)       // resolves labels from @Caption(message, messageCode) on bean fields
+    // bind custom input for a field:
+    .bind("industry", Input.singleSelect(String.class)
+        .items("Design & Creative", "Healthcare", "Technology")
+        .label(Localizable.of("Industry", "crm.customer.industry")).build())
+    .bind("country", Input.singleSelect(String.class)
+        .items("Germany", "Austria", "France")
+        .label(Localizable.of("Country", "crm.customer.country")).build())
+    // responsive columns via lambda:
+    .responsiveSteps(steps -> steps.mobile(1).tablet(2).desktop(3))
+    // required fields with validation message:
+    .required("name",    Localizable.of("Account name is required", "crm.customer.name.required"))
+    .required("country", Localizable.of("Country is required",      "crm.customer.country.required"))
+    // wizard / multi-step mode — no Save/Cancel footer:
+    .noFooter()
+    .build();
+
+// Lifecycle
+form.setBean(existingCustomer);
+boolean valid = form.validate();
+Customer saved = form.getBean(true);    // true = validate before returning
+```
+
+**A11Y**: `autoLabels(true)` reads `@Caption` annotations — always annotate every user-visible bean field with `@Caption(message = "fallback", messageCode = "domain.field")`.
 
 ---
 
-### 5 · Date input
+### 9 · Multi-step creation form
 
-**Holon:** `Components.input.localDate()`  
-**Vaadin fallback:** `DatePicker`
-
-#### I18N
+Used for "New Customer"-style full-page forms with sticky action bar and step progress.  
+See `NewCustomerDemoView` for the complete, compiling reference.
 
 ```java
-Input<LocalDate> dateInput = Components.input.localDate()
-    .label(Localizable.of("Invoice Date", "invoice.invoiceDate"))
-    .helperText(Localizable.of("Format: MM/DD/YYYY", "invoice.invoiceDate.helper"))
-    .required(Localizable.of("Invoice date is required", "validation.required.invoiceDate"))
+// 1. One EntityFormPanel per step (noFooter)
+EntityFormPanel<OrgBean> orgPanel = EntityFormPanel.bean(OrgBean.class)
+    .properties("name", "legalName", "type", "industry")
+    .autoLabels(true).noFooter().build();
+
+// 2. Wrap each panel in a FormStepCard
+FormStepCard step1 = Components.formStepCard()
+    .stepNumber(1).totalSteps(4)
+    .title(Localizable.of("Organization",                    "crm.step.org.title"))
+    .subtitle(Localizable.of("The legal entity you\u2019re adding", "crm.step.org.subtitle"))
+    .content(orgPanel)
+    .build();
+
+// 3. Assemble the full page scaffold
+EntityCreationForm creationForm = Components.entityCreationForm()
+    .title(Localizable.of("New customer",  "crm.page.newCustomer.title"))
+    .draftBadge(Localizable.of("Unsaved draft", "crm.badge.unsavedDraft"))
+    .steps(step1, step2, step3, step4)
+    .headerAction(discardBtn, saveBtn)
+    .barAction(discardBarBtn, saveBarBtn)
     .build();
 ```
 
-#### A11Y
+---
 
-| Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` |
-| Date format hint | `.helperText(...)` with locale-specific format hint |
-| Keyboard navigation | Vaadin's calendar popup is keyboard-navigable; ensure focus returns to the field after selection |
-| Locale | Pass locale to the underlying `DatePicker` via `dateInput.getComponent().setLocale(locale)` if needed beyond the Holon `LocalizationContext` locale |
+### 10 · Data grid / listing
+
+> Entry point: `Components.listing(T.class)` — returns a `ListingBundleBuilder<T>`.  
+> **Not** `ListingBundle.builder(PROPERTIES)`. Result exposes `.toolbar()`, `.grid()`, `.footer()`.
+
+```java
+var bundle = Components.listing(Customer.class)
+    .columns("id", "name", "industry", "city", "country", "status")
+    .pageSizes(10, 25, 50)
+    .defaultPageSize(10)
+    .fetch((q, text, sort) -> customerService.fetch(q.getOffset(), q.getLimit(), text))
+    .search(Localizable.of("Search customers…", "crm.customer.list.searchPlaceholder"))
+    .build();
+
+// Three-part layout (all pre-wired)
+add(bundle.toolbar(),   // page-size selector
+    bundle.grid(),      // data grid
+    bundle.footer());   // pagination bar
+```
 
 ---
 
-### 6 · Date-time input
+### 11 · Notifications
 
-**Holon:** `Components.input.localDateTime()`  
-**Vaadin fallback:** `DateTimePicker`
-
-#### I18N
+Both APIs are in Holon — use whichever fits:
 
 ```java
-Input<LocalDateTime> dtInput = Components.input.localDateTime()
-    .label(Localizable.of("Scheduled At", "task.scheduledAt"))
-    .required(Localizable.of("Scheduled date/time is required", "validation.required.scheduledAt"))
+// Quick shortcuts — com.holonplatform.vaadin.flow.components.utils.NotificationUtil
+NotificationUtil.notificationSuccess(Localizable.of("Customer saved!",            "crm.notify.customerSaved"));
+NotificationUtil.notificationError(Localizable.of("Please fix validation errors",  "crm.notify.validationError"));
+
+// Full builder — com.holonplatform.vaadin.flow.components.builders.NotificationBuilder
+NotificationBuilder.create()
+    .text(Localizable.of("Operation completed", "crm.notify.operationCompleted"))
+    .success()
+    .topCenter()
+    .duration(3000)
+    .build()
+    .open();
+// Variants: .success() · .error() · .warning() · .contrast() · .primary()
+```
+
+---
+
+### 12 · Confirmation dialog
+
+```java
+// com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog
+AlertDialog.builder()
+    .title(Localizable.of("Discard changes?",                "crm.dialog.discard.title"))
+    .description(Localizable.of("All unsaved changes will be lost.", "crm.dialog.discard.description"))
+    .headerIcon(VaadinIcon.TRASH.create(), Alert.Variant.DESTRUCTIVE)
+    .cancelText(Localizable.of("Keep editing", "crm.dialog.discard.cancel"))
+    .confirmText(Localizable.of("Discard",     "crm.dialog.discard.confirm"))
+    .variant(Alert.Variant.DESTRUCTIVE)
+    .onConfirm(() -> navigator.navigateTo(CustomerListView.class))
+    .build()
+    .open();
+// Variants: Alert.Variant.DEFAULT · DESTRUCTIVE · WARNING · SUCCESS · INFO
+```
+
+Focus is restored automatically on close — satisfies A11Y dialog requirement.
+
+---
+
+### 13 · Inline alert
+
+```java
+// com.holonplatform.vaadin.flow.vaadinplus.components.Alert
+Alert alert = Alert.builder(Alert.Variant.WARNING)
+    .title(Localizable.of("Unsaved changes",                       "crm.alert.unsaved.title"))
+    .description(Localizable.of("Changes will be lost if you navigate away.", "crm.alert.unsaved.description"))
     .build();
 ```
 
-#### A11Y
+---
 
-Same rules as **Date input** above; additionally set `aria-label` on the time sub-field if the
-two pickers are rendered separately:
+### 14 · Application shell (MainLayout)
 
 ```java
-// FALLBACK: Holon wrapper exposes the underlying component for ARIA tuning
-dtInput.getComponent().getElement()
-    .setAttribute("aria-label", "Scheduled date and time");
+@StyleSheet("context://themes/crm/styles.css")
+public class MainLayout extends AppLayout {
+    public MainLayout() {
+        var nav = SideNavBuilder.create()                       // com.iyensoft.vaadin.flow.components.builders.SideNavBuilder
+            .withNavItem(Localizable.of("Customers", "nav.customers"), CustomerListView.class, VaadinIcon.USER.create()).add()
+            .withNavItem(Localizable.of("Settings",  "nav.settings"),  SettingsView.class,     VaadinIcon.COG.create()).add()
+            .buildWrapper();
+
+        var shell = Components.appShell()                       // → AppShellLayout (com.holonplatform.vaadin.flow.vaadinplus.components)
+            .navbarBrand(Localizable.of("MiniCRM", "app.brand"), "v1.0")
+            .nav(nav)
+            .build();
+
+        addToDrawer(shell);
+    }
+}
 ```
 
 ---
 
-### 7 · Boolean / checkbox
+## I18N rules
 
-**Holon:** `Components.input.boolean_()`  
-**Vaadin fallback:** `Checkbox`
+> ⛔ **Raw string literals in user-visible text are a build-review failure.** Every method below MUST receive `Localizable.of("fallback", "message.key")`.
 
-#### I18N
+| Context | Mandatory pattern |
+|---------|------------------|
+| Bean field labels | `@Caption(message = "fallback", messageCode = "domain.field")` on the field; `EntityFormPanel.autoLabels(true)` resolves it |
+| Input label | `Input.string().label(Localizable.of("Account name", "crm.customer.name")).build()` |
+| Input placeholder | `Input.string().placeholder(Localizable.of("Enter name", "crm.customer.name.placeholder")).build()` |
+| Input helper / required | `.helperText(Localizable.of(...))` / `.required(Localizable.of(...))` |
+| Button text | `ButtonBuilder.create().text(Localizable.of("Save", "crm.action.save")).build()` |
+| Icon-button aria-label | `.ariaLabel(Localizable.of("Search", "crm.action.search"))` |
+| Notification text | `NotificationUtil.notificationSuccess(Localizable.of("Saved", "crm.notify.saved"))` |
+| Dialog title / description | `.title(Localizable.of(...))` / `.description(Localizable.of(...))` |
+| Dialog cancel / confirm | `.cancelText(Localizable.of(...))` / `.confirmText(Localizable.of(...))` |
+| Step title / subtitle | `.title(Localizable.of(...))` / `.subtitle(Localizable.of(...))` |
+| Page / creation form title | `.title(Localizable.of(...))` on `EntityCreationForm` builder |
+| Nav items | `.withNavItem(Localizable.of("Customers", "nav.customers"), ...)` |
+| Search placeholder | `.search(Localizable.of("Search…", "crm.customer.list.searchPlaceholder"))` |
+| App brand | `.navbarBrand(Localizable.of("MiniCRM", "app.brand"), version)` |
+| Tag text | `new Tag(Localizable.of("Draft", "tag.draft"))` — always use Localizable constructor |
+| StatusBadge / Chip / Highlight | Pass `Localizable.of(...)` to `setText()` / constructor where available |
 
-```java
-Input<Boolean> activeInput = Components.input.boolean_()
-    .label(Localizable.of("Active", "customer.active"))
-    .build();
-```
+All keys must exist in `src/main/resources/messages.properties`.  
+**Never** use `UI.getCurrent().getTranslation(...)` or implement `I18NProvider`.
 
-#### A11Y
+---
+
+## A11Y rules
+
+> ⛔ **A11Y violations are a build-review failure.** Every rule below is mandatory.
 
 | Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` renders as a `<label>` next to the checkbox — never use a placeholder only |
-| Group of checkboxes | Wrap in a `<fieldset>` with a `<legend>` if multiple related booleans are shown together (raw Vaadin `CheckboxGroup` as FALLBACK) |
+|------|---------------|
+| Every input has a visible label | Always call `.label(Localizable.of(...))` — never use placeholder as the only label |
+| Required fields | `.required("field", Localizable.of(...))` on `EntityFormPanel`, or `.required(Localizable.of(...))` on `Input` — Holon sets `aria-required` automatically |
+| Icon-only buttons | Always call `.ariaLabel(Localizable.of(...))` — raw string aria labels are also banned |
+| Data grid | Pass `ariaLabel` in listing configuration |
+| Enum selects | Annotate each enum constant with `@Caption(message, messageCode)` — `Input.enumSelect` uses those automatically |
+| Skip-to-content | Add a skip link as the first child of `MainLayout` |
+| Heading hierarchy | Use correct `<h1>`→`<h6>` rank; don't use headings for visual styling |
+| Dialogs | `AlertDialog` and `AlertModal` restore focus automatically on close — no manual `focus()` needed |
+| Color alone | Never convey state by color alone; pair with an icon or text label |
+| `Chip` / `ChipGroup` | Each `Chip` renders as `<button type="button" aria-pressed="...">` — state is communicated correctly; `ChipGroup` carries `role="group"` and a localizable `aria-label` |
+| `Separator` (meaningful) | Default — carries `role="separator"` and `aria-orientation`; use `.decorative(true)` only for purely visual dividers |
+| `Empty` state | Renders with `role="status"` so screen readers politely announce it when the collection becomes empty |
+| `Breadcrumb` | Renders as `<nav aria-label="Breadcrumb">`; current page item carries `aria-current="page"` automatically |
+| `Carousel` | Wraps in `role="region"` with a localizable `aria-label`; Prev/Next buttons carry localizable `aria-label` |
+| `FlowStepper` / `TimelineStepper` | Pass a localizable `ariaLabel` on the builder; individual step states are managed by the web component |
+| `InputOTP` | Rendered as an accessible composite; set `pattern("[0-9]")` for digit-only inputs |
+| `ButtonGroup` | Carries `role="group"` with a localizable `ariaLabel` |
+| `InputGroup` | Carries `role="group"` with a localizable `ariaLabel` |
 
----
-
-### 8 · Single-select combo
-
-**Holon:** `Components.input.singleSelect(Class<T>)`  
-**Vaadin fallback:** `ComboBox<T>` / `Select<T>`
-
-#### I18N
-
-```java
-// Enum / string items with Holon i18n captions
-Input<String> statusInput = Components.input.singleSelect(String.class)
-    .label(Localizable.of("Status", "order.status"))
-    .items("PENDING", "APPROVED", "REJECTED")
-    .itemCaptionGenerator(s -> Localizable.of(s, "order.status." + s.toLowerCase()))
-    .required(Localizable.of("Status is required", "validation.required.status"))
-    .build();
-
-// Or with entity items from a Datastore (lazy)
-Input<Customer> customerInput = Components.input.singleSelect(Customer.class)
-    .label(Localizable.of("Customer", "order.customer"))
-    .dataSource(ds, Customer.PROPERTIES.getDataPath(), Customer.PROPERTIES)
-    .itemCaptionGenerator(c -> Localizable.of(c.getName(), null))
-    .required(Localizable.of("Customer is required", "validation.required.customer"))
-    .build();
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` |
-| Meaningful captions | `.itemCaptionGenerator(...)` with translated captions — never show raw enum constants to users |
-| Placeholder | `.placeholder(Localizable.of("Select…", "common.select.placeholder"))` |
-| Keyboard | Vaadin `ComboBox` supports type-ahead and arrow-key navigation; Holon wrapper preserves this |
-
----
-
-### 9 · Multi-select
-
-**Holon:** `Components.input.multiSelect(Class<T>)`  
-**Vaadin fallback:** `MultiSelectComboBox<T>`
-
-#### I18N
-
-```java
-Input<Set<String>> rolesInput = Components.input.multiSelect(String.class)
-    .label(Localizable.of("Roles", "user.roles"))
-    .items("ADMIN", "REVIEWER", "VIEWER")
-    .itemCaptionGenerator(r -> Localizable.of(r, "role." + r.toLowerCase()))
-    .build();
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` |
-| Selection count announcement | Vaadin's `MultiSelectComboBox` announces the selected count; Holon wrapper preserves this |
-| Clear-all button | Vaadin renders a clear button with `aria-label="Clear"` by default; do not suppress it |
-
----
-
-### 10 · Text area (multi-line)
-
-**Holon:** `Components.input.string().multiLine()`  
-**Vaadin fallback:** `TextArea`
-
-#### I18N
-
-```java
-Input<String> notesInput = Components.input.string()
-    .multiLine()
-    .label(Localizable.of("Notes", "order.notes"))
-    .helperText(Localizable.of("Optional. Max 1000 characters.", "order.notes.helper"))
-    .maxLength(1000)
-    .build();
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Visible label | `.label(...)` |
-| Character counter | `.maxLength(n)` enables Vaadin's built-in character counter (announces remaining characters to screen readers) |
-| Resize | Do not set `resize: none` in CSS unless the layout requires it; resizing improves usability for low-vision users |
-
----
-
-### 11 · Data grid — `ListingBundle<T>` ⭐ preferred
-
-**Holon:** `ListingBundle<T>` (wraps `PropertyListing<T>`)  
-**Vaadin fallback:** `Grid<T>` (with `// FALLBACK: ListingBundle cannot express <thing>`)
-
-#### I18N
-
-When the bean carries `@Caption` annotations (as required by the bean-model convention),
-`ListingBundle` resolves column headers **automatically** from the `BeanPropertySet` — no
-`.columnHeader(...)` calls are needed.
-
-```java
-// Bean fields are annotated with @Caption — see bean-model.md
-// @Caption(message = "Customer", messageCode = "order.customerName") on customerName
-// @Caption(message = "Total (USD)", messageCode = "order.totalAmount") on totalAmount
-// @Caption(message = "Status", messageCode = "order.status") on status
-
-ListingBundle<Order> bundle = ListingBundle
-    .builder(Order.PROPERTIES)
-    .dataSource(ds, Order.PROPERTIES.getDataPath())
-    .visibleProperties("id", "customerName", "totalAmount", "status", "createdAt")
-    .sortable("createdAt", true)
-    .filterable(true)
-    .selectionMode(SelectionMode.SINGLE)
-    .build();
-// Column headers for customerName, totalAmount, status are resolved from
-// @Caption messageCode via the active LocalizationContext automatically.
-```
-
-Override a column header only when the view-specific label must differ from the bean default:
-
-```java
-// Explicit override — use only when @Caption value is not suitable for this view
-.columnHeader("totalAmount", Localizable.of("Invoice Amount (USD)", "view.orderList.totalAmount"))
-```
-
-Register message keys in `messages.properties`:
-```properties
-order.customerName  = Customer
-order.totalAmount   = Total (USD)
-order.status        = Status
-order.createdAt     = Created
-order.list.empty    = No orders found
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Grid `aria-label` | `bundle.getListing().getComponent().getElement().setAttribute("aria-label", LocalizationContext.require().getMessage("order.list.ariaLabel", "Orders list"))` |
-| Column headers | Resolved from `@Caption` automatically; explicit `.columnHeader(...)` only for view-specific overrides — empty headers fail WCAG SC 1.3.1 |
-| Row selection announcement | Use `SelectionMode.SINGLE` or `MULTI`; Vaadin Grid announces selection state automatically |
-| Keyboard navigation | Vaadin Grid supports full keyboard navigation; do not suppress focus styles in CSS |
-| Empty state | `bundle.getListing().setEmptyStateText(Localizable.of("No orders found", "order.list.empty"))` |
-| Sort buttons | Vaadin Grid column sort buttons include `aria-sort` automatically when `.sortable(col, true)` is set |
-
----
-
-### 12 · Entity form — `EntityPanelForm<T>` ⭐ preferred
-
-**Holon:** `EntityPanelForm<T>` (wraps `PropertyForm<T>`)  
-**Vaadin fallback:** `FormLayout` + `Binder<T>` (with `// FALLBACK: EntityPanelForm cannot express <thing>`)
-
-#### I18N
-
-When bean fields carry `@Caption` annotations (as required by the bean-model convention),
-`EntityPanelForm` resolves field labels **automatically** from the `BeanPropertySet` — no
-`.propertyCaption(...)` calls are needed.
-
-```java
-// Bean fields are annotated — see bean-model.md:
-// @NotNull @Caption(message = "Customer Name", messageCode = "order.customerName")
-// @NotNull @Caption(message = "Total Amount (USD)", messageCode = "order.totalAmount")
-// @NotNull @Caption(message = "Status", messageCode = "order.status")
-//          @Caption(message = "Notes", messageCode = "order.notes")
-
-EntityPanelForm<Order> form = EntityPanelForm
-    .builder(Order.PROPERTIES)
-    .visibleProperties("customerName", "totalAmount", "status", "notes")
-    .build();
-// Field labels are resolved from @Caption messageCode via LocalizationContext automatically.
-// @NotNull fields have aria-required="true" set automatically.
-```
-
-Override a field label only when the view-specific caption must differ from the bean default:
-
-```java
-// Explicit override — use only when @Caption value is not suitable for this view
-.propertyCaption("totalAmount",
-    Localizable.of("Invoice Amount (USD)", "view.orderForm.totalAmount"))
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| All fields labelled | Labels are resolved from `@Caption` on bean fields automatically — no `.propertyCaption(...)` needed unless overriding; empty labels fail WCAG SC 1.3.1 |
-| Required fields | `@NotNull` on bean field → `EntityPanelForm` sets `aria-required="true"` automatically |
-| Error summary | When `form.getBean()` throws `ValidationException`, show all messages in a `Notification` with `NotificationVariant.LUMO_ERROR` |
-| Form landmark | Wrap in a `<section>` or `<article>` with an `aria-labelledby` pointing to the form heading |
-| Focus management | After a successful save, move focus to a confirmation message or the listing; do not leave focus on a now-hidden field |
-
----
-
-### 13 · Button
-
-**Holon:** `Components.button()`  
-**Vaadin fallback:** `Button` (Holon wraps Vaadin `Button`; always use `Components.button()`)
-
-#### I18N
-
-```java
-// Primary action
-Button saveButton = Components.button()
-    .text(Localizable.of("Save", "action.save"))
-    .themeVariants(ButtonVariant.LUMO_PRIMARY)
-    .onClick(e -> save())
-    .build();
-
-// Destructive action
-Button deleteButton = Components.button()
-    .text(Localizable.of("Delete", "action.delete"))
-    .themeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_TERTIARY)
-    .onClick(e -> confirmDelete())
-    .build();
-
-// Icon-only button (requires accessible name)
-Button refreshButton = Components.button()
-    .icon(VaadinIcon.REFRESH.create())
-    .title(Localizable.of("Refresh list", "action.refresh"))   // tooltip = accessible name fallback
-    .onClick(e -> listing.refresh())
-    .build();
-// For icon-only: also set aria-label explicitly
-refreshButton.getElement().setAttribute("aria-label",
-    LocalizationContext.require().getMessage("action.refresh", "Refresh list"));
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Descriptive text or `aria-label` | Every button must have either visible text or an explicit `aria-label`; never rely solely on an icon without a label |
-| `ButtonVariant` required | Always apply a variant (`LUMO_PRIMARY`, `LUMO_ERROR`, `LUMO_TERTIARY`, `LUMO_SUCCESS`) so intent is clear at all zoom levels and in high-contrast mode |
-| Disabled state | Use `.setEnabled(false)` instead of hiding a button that is temporarily unavailable; add a tooltip explaining why it is disabled |
-| Loading / async | During async operations, call `.setEnabled(false)` and restore after completion to prevent double-submit |
-
----
-
-### 14 · Notification
-
-**Vaadin fallback** (no Holon Notification API):  
-`// FALLBACK: no Holon equivalent for Notification`
-
-#### I18N
-
-```java
-// Success
-String msg = LocalizationContext.require()
-    .getMessage("order.saved", "Order saved successfully.");
-Notification.show(msg, 3000, Notification.Position.BOTTOM_END);
-
-// Error
-String errMsg = LocalizationContext.require()
-    .getMessage("error.save.order", "Could not save order. Please try again.");
-Notification error = new Notification(errMsg, 5000, Notification.Position.MIDDLE);
-error.addThemeVariants(NotificationVariant.LUMO_ERROR);
-error.open();
-```
-
-> Never embed literal English strings without a `LocalizationContext.require().getMessage(key, fallback)` call.
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| `role="alert"` for errors | `NotificationVariant.LUMO_ERROR` triggers Vaadin to add `role="alert"` — always use it for errors |
-| Duration for success | Set a non-zero `duration` (e.g. 3000 ms) so the notification dismisses automatically; do not use 0 for success messages |
-| Position | Use `BOTTOM_END` for non-critical messages; `MIDDLE` for errors that require user acknowledgement |
-| Screen reader text | Keep notification text concise (≤ 100 chars) and action-oriented |
-
----
-
-### 15 · Confirm dialog
-
-**Vaadin fallback** (no Holon equivalent):  
-`// FALLBACK: no Holon equivalent for ConfirmDialog`
-
-#### I18N
-
-```java
-// FALLBACK: no Holon equivalent for ConfirmDialog
-ConfirmDialog dialog = new ConfirmDialog();
-dialog.setHeader(LocalizationContext.require()
-    .getMessage("dialog.confirm.delete.header", "Confirm Delete"));
-dialog.setText(LocalizationContext.require()
-    .getMessage("dialog.confirm.delete.text",
-        "Are you sure you want to delete this record? This action cannot be undone."));
-dialog.setConfirmText(LocalizationContext.require()
-    .getMessage("action.delete", "Delete"));
-dialog.setConfirmButtonTheme("error primary");
-dialog.setCancelText(LocalizationContext.require()
-    .getMessage("action.cancel", "Cancel"));
-dialog.addConfirmListener(e -> performDelete());
-dialog.open();
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Dialog role | Vaadin `ConfirmDialog` renders as `role="dialog"` with `aria-modal="true"` automatically |
-| Focus trap | Focus is automatically moved to the first focusable element inside the dialog on open |
-| Focus restore | On close (confirm or cancel), focus must return to the element that triggered the dialog: `triggerButton.focus()` in both listeners |
-| Descriptive heading | Always call `setHeader(...)` — dialog heading is the accessible name (`aria-labelledby`) |
-
----
-
-### 16 · Upload
-
-**Vaadin fallback** (no Holon equivalent):  
-`// FALLBACK: no Holon equivalent for Upload`
-
-#### I18N
-
-```java
-// FALLBACK: no Holon equivalent for Upload
-Upload upload = new Upload();
-UploadI18N i18n = new UploadI18N();
-i18n.setDropFiles(new UploadI18N.DropFiles()
-    .setOne(LocalizationContext.require().getMessage("upload.dropFiles.one", "Drop file here"))
-    .setMany(LocalizationContext.require().getMessage("upload.dropFiles.many", "Drop files here")));
-i18n.setAddFiles(new UploadI18N.AddFiles()
-    .setOne(LocalizationContext.require().getMessage("upload.addFile", "Upload File…"))
-    .setMany(LocalizationContext.require().getMessage("upload.addFiles", "Upload Files…")));
-i18n.setError(new UploadI18N.Error()
-    .setFileIsTooBig(LocalizationContext.require().getMessage("upload.error.tooBig", "File is too big"))
-    .setIncorrectFileType(LocalizationContext.require().getMessage("upload.error.wrongType", "Incorrect file type")));
-upload.setI18n(i18n);
-upload.setAcceptedFileTypes("application/pdf", ".pdf");
-upload.setMaxFileSize(10 * 1024 * 1024); // 10 MB
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Drop zone label | Set `UploadI18N` drop-files text so screen readers can announce the drop target |
-| Accepted file types | State accepted types in helper text next to the upload component |
-| Progress announcements | Vaadin `Upload` announces progress via ARIA live regions automatically |
-| Error messages | Surface `Upload` error events via the LUMO_ERROR `Notification` pattern above |
-
----
-
-### 17 · Navigation shell (`AppLayout` + `SideNav`)
-
-**Vaadin fallback** (no Holon equivalent):  
-`// FALLBACK: no Holon equivalent for AppLayout, DrawerToggle, SideNav`
-
-#### I18N
-
-```java
-// FALLBACK: no Holon equivalent for AppLayout application shell
-H1 title = new H1(LocalizationContext.require()
-    .getMessage("app.title", "My Application"));
-
-SideNav nav = new SideNav();
-nav.addItem(new SideNavItem(
-    LocalizationContext.require().getMessage("nav.orders", "Orders"),
-    OrderListView.class,
-    VaadinIcon.PACKAGE.create()));
-nav.addItem(new SideNavItem(
-    LocalizationContext.require().getMessage("nav.customers", "Customers"),
-    CustomerListView.class,
-    VaadinIcon.USERS.create()));
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| `<nav>` landmark | Vaadin `SideNav` renders inside a `<nav>` element automatically; do not wrap it in an extra `<nav>` |
-| `aria-label` on `<nav>` | `nav.getElement().setAttribute("aria-label", LocalizationContext.require().getMessage("nav.ariaLabel", "Main navigation"))` |
-| Skip-to-content link | Add a visually-hidden `<a href="#main-content">Skip to main content</a>` as the first focusable element in `MainLayout`; set `id="main-content"` on the content area |
-| Drawer toggle label | Vaadin `DrawerToggle` renders with `aria-label="Toggle menu"` by default; override if the application is not in English: `toggle.setAriaLabel(LocalizationContext.require().getMessage("nav.toggle", "Toggle menu"))` |
-| Active route indication | Vaadin `SideNav` marks the active item with `aria-current="page"` automatically |
-
----
-
-### 18 · Responsive form toolbar (`FormLayout`)
-
-**Vaadin fallback** (no Holon equivalent):  
-`// FALLBACK: no Holon equivalent for FormLayout responsive steps`
-
-#### I18N
-
-Labels are applied on the individual `Components.input.*` fields — see the input entries above.
-`FormLayout` itself has no text to localize.
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| Logical reading order | Add fields to `FormLayout` in the order a screen reader should announce them (left-to-right, top-to-bottom when displayed in multiple columns) |
-| Column span hints | Use `toolbar.setColspan(component, 2)` to keep related fields on the same row — avoid arbitrary column spans that break logical grouping |
-| `<fieldset>` + `<legend>` for groups | When a `FormLayout` groups related fields (e.g. "Shipping Address"), wrap it in a `Details` component or use a Vaadin `Details` with a localized summary |
-
----
-
-### 19 · Tabs
-
-**Vaadin fallback** (no Holon equivalent):  
-`// FALLBACK: no Holon equivalent for Tabs`
-
-#### I18N
-
-```java
-// FALLBACK: no Holon equivalent for Tabs
-Tabs tabs = new Tabs();
-Tab detailsTab = new Tab(LocalizationContext.require()
-    .getMessage("tab.details", "Details"));
-Tab historyTab = new Tab(LocalizationContext.require()
-    .getMessage("tab.history", "History"));
-tabs.add(detailsTab, historyTab);
-```
-
-#### A11Y
-
-| Rule | Implementation |
-|------|----------------|
-| `role="tablist"` | Vaadin `Tabs` renders as `role="tablist"` with individual `role="tab"` children automatically |
-| `aria-selected` | Vaadin sets `aria-selected="true"` on the active tab automatically |
-| `aria-controls` | Manually link each `Tab` to its panel: `detailsTab.getElement().setAttribute("aria-controls", "details-panel")` and `detailsPanel.setId("details-panel")` |
-| Keyboard | Left/right arrow keys navigate between tabs (Vaadin default); do not intercept these key events |
-
----
-
-## I18N conventions (global rules)
-
-All user-visible strings in the Holon + Vaadin stack MUST use Holon i18n. Never use Vaadin
-`I18NProvider` or `UI.getCurrent().getTranslation(...)`.
-
-### Primary source of truth: `@Caption` on the bean
-
-The preferred and required approach is to **embed I18N directly on the bean field** using
-`@Caption` from `com.holonplatform.core.i18n.Caption`. `BeanPropertySet` reads all
-`@Caption` annotations at startup, and every Holon component built from that
-`BeanPropertySet` automatically uses them.
-
-```java
-import com.holonplatform.core.i18n.Caption;
-import com.holonplatform.core.beans.NotNull;
-
-@NotNull
-@Caption(message = "Customer Name", messageCode = "order.customerName")
-private String customerName;
-
-@NotNull
-@Caption(message = "Total Amount (USD)", messageCode = "order.totalAmount")
-private BigDecimal totalAmount;
-```
-
-With `@Caption` on every field:
-- `ListingBundle` uses `messageCode` for column headers — no `.columnHeader(...)` needed.
-- `EntityPanelForm` uses `messageCode` for field labels — no `.propertyCaption(...)` needed.
-- `@NotNull` causes `EntityPanelForm` to mark the field as required (`aria-required="true"`).
-
-Override with `.columnHeader(...)` / `.propertyCaption(...)` **only** when a view-specific
-label must differ from the bean-level default.
-
-### Key naming convention
-
-```
-<domain>.<field>                      # field label          order.customerName
-<domain>.<field>.placeholder          # placeholder          order.customerName.placeholder
-<domain>.<field>.helper               # helper text          order.customerName.helper
-validation.required.<field>           # required message     validation.required.customerName
-validation.<rule>.<field>             # other validation     validation.maxLength.customerName
-action.<verb>                         # button / action      action.save  action.delete
-dialog.<type>.<key>                   # dialog text          dialog.confirm.delete.header
-nav.<key>                             # navigation           nav.orders  nav.toggle
-app.<key>                             # app-level            app.title
-error.<key>                           # error messages       error.save.order
-<domain>.list.empty                   # empty grid state     order.list.empty
-```
-
-### Inline convention for generated snippets
-
-When emitting code, always pair the Holon i18n key with a fallback string for readability:
-
-```java
-// Preferred form for generated code
-.label(Localizable.of("Customer Name", "order.customerName"))
-// reads as: fallback="Customer Name", key="order.customerName"
-```
-
-### `LocalizationContext` for non-component strings (notifications, dialogs)
-
-```java
-// Retrieve a translated string outside a component builder
-String msg = LocalizationContext.require()
-    .getMessage("order.saved", "Order saved.");
-
-// With parameters
-String msg = LocalizationContext.require()
-    .getMessage("order.savedWithId", new Object[]{ order.getId() },
-        "Order #" + order.getId() + " saved.");
-```
-
----
-
-## A11Y conventions (global rules)
-
-Every screen produced by a construction skill MUST pass the following before code is emitted:
-
-### Mandatory checklist
-
-- [ ] Every bean field that is user-visible carries `@Caption(message, messageCode)` — this is the single source of truth for field labels
-- [ ] Every mandatory field also carries `@NotNull` so `EntityPanelForm` marks it `aria-required="true"` automatically
-- [ ] Every interactive element (input, button, link, grid) has a descriptive accessible name
-      (visible label, `aria-label`, or `aria-labelledby`)
-- [ ] Standalone inputs (not part of an `EntityPanelForm`) call `.label(Localizable.of(...))` explicitly
-- [ ] Error messages are surfaced as `role="alert"` or via `NotificationVariant.LUMO_ERROR`
-- [ ] No information conveyed by colour alone (always add text or icon alongside colour cues)
-- [ ] All `ButtonVariant` colours have sufficient contrast in Lumo light and dark themes
-- [ ] Focus order follows the visual reading order; no focus traps except inside open dialogs
-- [ ] After dialog close, focus returns to the triggering element
-- [ ] Navigation landmarks present: `<header>` (navbar), `<nav>` (side nav), `<main>` (content area)
-- [ ] Skip-to-content link present in `MainLayout` as the first focusable element
-- [ ] Grid columns all have visible, translated headers (auto from `@Caption`; override only when needed)
-- [ ] Empty grid state has a readable, translated message via `.setEmptyStateText(Localizable)`
-- [ ] Icon-only buttons have `aria-label` set (via Holon `.title()` and explicit `.setAttribute`)
-- [ ] No `tabindex` values > 0 (breaks natural tab order)
-- [ ] Custom CSS does not suppress `:focus-visible` outline styles
-
-### WCAG 2.1 AA target level
-
-The stack targets **WCAG 2.1 AA**. The Lumo design tokens (colour, spacing, font size) are
-pre-tuned to AA contrast ratios. Override them via `styles.css` CSS custom properties only;
-never hard-code colours or font sizes in Java.
-
----
-
-## Cross-reference
-
-| Reference | Purpose |
-|-----------|---------|
-| [`holon-vaadin-ui.md`](holon-vaadin-ui.md) | Composite component patterns (ListingBundle, EntityPanelForm, responsive layout) |
-| [`bean-model.md`](bean-model.md) | JavaBean + BeanPropertySet conventions |
-| [`datastore-patterns.md`](datastore-patterns.md) | Datastore query / save / delete idioms |
-| [`security-patterns.md`](security-patterns.md) | Holon Auth (`@Permitted`, `AuthContext`) |
-| [`context-wiring.md`](context-wiring.md) | Holon `Context` wiring |
-| [`../../rules/holon-stack.md`](../../rules/holon-stack.md) | Master allow/ban list |

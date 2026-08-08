@@ -1,186 +1,523 @@
 # Holon Vaadin UI Patterns Reference
+# `holon-vaadin-flow` 10.0.3-SNAPSHOT
 
-All UI in the Holon Platform + Vaadin Flow stack is built with **Holon Vaadin Flow**
-(`com.holon-platform.vaadin:holon-vaadin-flow`). Use raw Vaadin components only as a
-fallback when Holon Vaadin Flow has no equivalent (comment required: `// FALLBACK: no Holon equivalent for <thing>`).
+All UI is built exclusively through **`Components.*`** factory methods and
+**`EntityFormPanel`** / **`ListingBundle`** / **`MasterDetailLayout`** composites.
 
-**Component preference:** for data grids use **`ListingBundle`**; for entity forms use
-**`EntityPanelForm`**. These composite components wrap the lower-level `PropertyListing` /
-`PropertyForm` primitives. Use the bare primitive only when the bundle cannot express the
-requirement, preceded by `// FALLBACK: ListingBundle/EntityPanelForm cannot express <thing>`.
+**No raw `com.vaadin.flow.component.*` imports** — if a Holon component does not
+exist for what you need, stop and ask the developer before writing anything.
 
-All user-visible text must use **Holon i18n** conventions (message keys + fallback text).
-Do not use Vaadin `I18NProvider` or `UI.getCurrent().getTranslation(...)` in generated code.
+---
+
+## Quick component map
+
+| Need | Use |
+|---|---|
+| Application shell / nav | `AppShellLayout.builder()` |
+| Programmatic navigation | `Navigator.get().navigateTo(...)` |
+| Data grid | `Components.listing(T.class)` (bean) or `Components.listing(PropertySet)` (PropertySet) |
+| Entity form with save/cancel | `EntityFormPanel.bean(T.class)...build()` |
+| Master-list + detail panel | `Components.masterDetail(T.class)...build()` |
+| Standalone input | `Components.input.*` |
+| Notification | `NotificationUtil.notificationSuccess/Error/Warning(msg)` |
+| Alert inline | `Components.alert()` |
+| Alert dialog | `Components.alertDialog()` |
+| Kanban board | `KanbanBoard.builder()...build()` |
+| Filter form | `FilterInputForm.formLayout()/verticalLayout()` |
+| Button | `Components.button()` |
+| Layouts | `Components.vl()`, `Components.hl()`, `Components.formLayout()`, `Components.row()`, `Components.column()` |
+| Labels | `Components.span()`, `Components.h1()`–`h6()`, `Components.label()` |
+| Tabs / Accordion | `Components.tabSheet()`, `Components.accordion()` |
+| Side navigation | `Components.sideNav()` |
+| Card / Panel | `Components.card()`, `Components.panel()` |
+| Breadcrumb | `Components.breadcrumb()` |
+| Sheet (slide-over) | `Components.sheet()` |
+| Stepper / Timeline | `Components.stepper()`, `Components.timelineStepper()` |
+| Avatar / AvatarGroup | `Components.avatar()`, `Components.avatarGroup()` |
+| OTP input | `Components.inputOTP()` |
+| Empty state | `Components.empty()` |
+| Separator | `Components.separator()` |
+| Icon badge | `Components.iconBadge()` |
+
+---
+
+## Application Shell (`AppShellLayout`)
+
+Use `AppShellLayout.builder()` for the application shell — **never** extend raw `AppLayout`
+directly or construct `DrawerToggle`/`SideNav` manually.
+
+```java
+package com.example.ap.shared;
+
+import com.holonplatform.vaadin.flow.vaadinplus.components.AppShellLayout;
+import com.vaadin.flow.router.RouterLayout;
+
+public class MainLayout extends AppShellLayout implements RouterLayout {
+
+    public MainLayout() {
+        AppShellLayout.builder()
+            .navbarBrand("MyApp", DashboardView.class)   // brand text + home route
+            .themeToggle()                                // light/dark toggle button
+            .nav(buildDrawerNav())                        // drawer content
+            .configure(this);                             // apply to this instance
+    }
+
+    private static com.vaadin.flow.component.html.Div buildDrawerNav() {
+        // use Components.sideNav() for the navigation items
+        var nav = Components.sideNav()
+            .withItem("Dashboard", DashboardView.class)
+            .withItem("Bills", BillListView.class)
+            .withItem("Customers", CustomerListView.class)
+            .build();
+        var div = new com.vaadin.flow.component.html.Div(nav);
+        return div;
+    }
+}
+```
+
+`AppShellLayoutBuilder` key methods:
+
+| Method | Description |
+|---|---|
+| `navbarBrand(title)` | Title in navbar |
+| `navbarBrand(title, routeClass)` | Title as home link |
+| `navbarBrandLogo(component)` | Logo component |
+| `search(placeholder)` | Global search field |
+| `search(placeholder, consumer)` | Search with handler |
+| `notifications(labels...)` | Notification bell |
+| `themeToggle()` | Light/dark toggle |
+| `user(consumer)` | User avatar/menu |
+| `languages(locales...)` | Language switcher |
+| `nav(div)` | Drawer nav content |
+| `nav(div, sideNav)` | Drawer nav with SideNav |
+| `drawerToggle(bool)` | Show/hide drawer toggle |
+| `customizeStart/End(consumer)` | Inject custom AppBar components |
+| `configure(appLayout)` | Apply to existing layout |
+| `build()` | Build new `AppShellLayout` |
 
 ---
 
 ## Route / View skeleton
 
 ```java
-package com.example.ap.ui;
+package com.example.ap.bill;
 
 import com.holonplatform.auth.annotations.Permitted;
-import com.holonplatform.vaadin.flow.components.Components;
-import com.holonplatform.vaadin.flow.components.ListingBundle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.example.ap.domain.Bill;
-import com.example.ap.service.BillService;
-import com.holonplatform.core.Context;
 
-@Route("bills")
-@Permitted("bills:view")            // Holon Auth — see security-patterns.md
+@Route(value = "bills", layout = MainLayout.class)
+@Permitted("bills:view")
 public class BillListView extends VerticalLayout {
 
-    public BillListView() {
-        BillService svc = Context.get()
-            .resource(BillService.CONTEXT_KEY, BillService.class)
-            .orElseThrow();
+    public BillListView(BillService svc) {
+        setSizeFull();
+        setPadding(false);
+        // ... build content
+    }
+}
+```
 
-        ListingBundle<Bill> bundle = ListingBundle
-            .builder(Bill.PROPERTIES)
-            .dataSource(svc::findAll)   // or dataSource(ds, Bill.PROPERTIES.getDataPath())
-            .build();
+For access control use `@Permitted` (Holon Auth). If per-action checks are needed use
+`BeforeEnterObserver`:
 
-        add(bundle);
+```java
+@Override
+public void beforeEnter(BeforeEnterEvent event) {
+    if (!AuthContext.require().isPermitted("bills:view")) {
+        event.rerouteTo(AccessDeniedView.class);
     }
 }
 ```
 
 ---
 
-## ListingBundle (data grid)
-
-Holon `ListingBundle` is the preferred data-bound grid: it wraps a `PropertyListing`
-backed by a `BeanPropertySet` and adds the standard listing toolbar. Configure it with
-the same fluent builder used by `PropertyListing`.
+## Navigation (`Navigator`)
 
 ```java
-import com.holonplatform.vaadin.flow.components.ListingBundle;
+import com.holonplatform.vaadin.flow.navigator.Navigator;
 
-// From a Datastore directly (recommended — lazy loading, sorting, filtering)
-Datastore ds = Context.get().resource(Datastore.CONTEXT_KEY, Datastore.class).orElseThrow();
+// Navigate to a view class
+Navigator.get().navigateTo(BillListView.class);
 
-ListingBundle<Bill> bundle = ListingBundle
-    .builder(Bill.PROPERTIES)
-    .dataSource(ds, Bill.PROPERTIES.getDataPath())      // lazy Datastore-backed
-    .visibleProperties("vendorName", "invoiceNumber", "invoiceDate", "totalAmount", "status")
-    .sortable("invoiceDate", true)
-    .filterable(true)
-    .selectionMode(SelectionMode.SINGLE)
-    .withSelectionListener(event -> onBillSelected(event.getFirstSelectedItem().orElse(null)))
-    .build();
+// Navigate back / to previous
+Navigator.get().navigateBack();
+Navigator.get().navigateToPrevious();
 
-// From a List (small datasets only)
-ListingBundle<Bill> bundle = ListingBundle
-    .builder(Bill.PROPERTIES)
-    .items(svc.findPending())
-    .build();
+// Navigate with URL parameters
+Navigator.get().navigateTo(BillDetailView.class, Map.of("id", 42L));
 
-// Access the underlying PropertyListing when needed
-bundle.getListing().refresh();
+// Build a URL (e.g. for links)
+String url = Navigator.get().getUrl(BillDetailView.class);
+
+// Navigate to default (home)
+Navigator.get().navigateToDefault();
 ```
 
-> **Fallback:** use a bare `PropertyListing` only when `ListingBundle` cannot express the
-> requirement, preceded by `// FALLBACK: ListingBundle cannot express <thing>`.
-
----
-
-## EntityPanelForm (entity form)
-
-`EntityPanelForm` is the preferred form component: it wraps a `PropertyForm` bound to a
-`BeanPropertySet` inside a panel. Use `setBean()` / `getBean()` to read/write values.
+Use `@QueryParameter` on a view field to bind URL query parameters:
 
 ```java
-import com.holonplatform.vaadin.flow.components.EntityPanelForm;
+@Route("bills")
+public class BillListView extends VerticalLayout {
 
-EntityPanelForm<Bill> form = EntityPanelForm.builder(Bill.PROPERTIES)
-    .visibleProperties("vendorName", "invoiceNumber", "invoiceDate", "totalAmount", "status")
-    .build();
+    @QueryParameter("status")
+    private String filterStatus;   // bound from ?status=PENDING_REVIEW
 
-// Populate from existing bean
-form.setBean(existingBill);
-
-// Read back (validates and throws if invalid)
-try {
-    Bill updated = form.getBean();
-    svc.save(updated);
-} catch (ValidationException e) {
-    Notification.show("Validation failed: " + e.getMessage());
+    @OnShow
+    void onShow() {
+        // called after navigation parameters are injected
+        refresh();
+    }
 }
 ```
 
-> **Fallback:** use a bare `PropertyForm` only when `EntityPanelForm` cannot express the
-> requirement, preceded by `// FALLBACK: EntityPanelForm cannot express <thing>`.
-
 ---
 
-## Input components (`Components.input.*`)
+## `ListingBundle` (data grid)
+
+`ListingBundle<T>` is the standard data grid component. It wraps an `ItemListing<T>` with
+a toolbar (search, filter panel, menu actions, pagination) and an optional empty/no-results
+state. Build it via `Components.listing(...)`.
+
+### Bean-based listing
 
 ```java
-// String input
-Input<String> nameInput = Components.input.string()
-    .label("Vendor Name")
-    .required()
-    .maxLength(200)
+import com.holonplatform.vaadin.flow.components.Components;
+import com.holonplatform.vaadin.flow.components.ListingBundle;
+
+// Components.listing(Class<T>) → ListingBundleBuilder<T> → ListingBundle<T>
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findAll().toList())          // FetchCallback — called on each refresh
     .build();
 
-// Number input
-Input<BigDecimal> amountInput = Components.input.bigDecimal()
-    .label("Total Amount")
-    .required()
+add(bundle);
+```
+
+### Filtered fetch
+
+```java
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch((filter, sortOrders) -> {
+        // filter is Optional<QueryFilter>, sortOrders is List<QuerySort>
+        return svc.findAll(filter.orElse(null)).toList();
+    })
+    .search("Search bills...")       // enables search box; filter is passed to fetch callback
+    .withFilterPanel()               // enables advanced filter panel
+    .paginated()                     // paginated mode (default: virtual scroll)
+    .defaultPageSize(20)
+    .pageSizes(10, 20, 50)
     .build();
+```
 
-// Date / time
-Input<LocalDate> dateInput = Components.input.localDate()
-    .label("Invoice Date")
-    .required()
+### Columns, actions, empty state
+
+```java
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findAll().toList())
+    .columns("vendorName", "invoiceDate", "totalAmount", "status")  // visible + order
+    .hidden("id")                              // hide specific columns
+    .gridHeader("Bills", actionButton)         // toolbar title + context components
+    .withMenuAction("Export CSV", this::exportCsv)
+    .withMenuAction(VaadinIcon.DOWNLOAD, "Export Excel", this::exportXlsx)
+    .importAction(this::handleImport)
+    .withEditAction(bill -> openEditForm(bill))
+    .withDeleteAction(bill -> svc.delete(bill))
+    .withRowAction(VaadinIcon.EYE, "View", bill -> openDetailSheet(bill))
+    .multiSelect()                             // enable multi-select
+    .emptyState()                              // show default empty state when no data
+    .noResultsState()                          // show default no-results state after filtering
     .build();
+```
 
-// Single-select combo
-Input<String> statusInput = Components.input.singleSelect(String.class)
-    .label("Status")
-    .items("PENDING_REVIEW", "APPROVED", "REJECTED")
+### Mobile-responsive column
+
+```java
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findAll().toList())
+    .mobileViewColumn(LitRenderer.<Bill>of(
+        "<div>${item.vendor}</div><div>${item.amount}</div>")
+        .withProperty("vendor", Bill::getVendorName)
+        .withProperty("amount", b -> b.getTotalAmount().toString()))
+    .mobileViewHeader("Bills")
     .build();
+```
 
-// Checkbox
-Input<Boolean> activeInput = Components.input.boolean_()
-    .label("Active")
+### Access the underlying grid
+
+```java
+bundle.listing();          // ItemListing<Bill>
+bundle.grid();             // com.vaadin.flow.component.grid.Grid<Bill>
+bundle.toolbar();          // toolbar Div
+bundle.footer();           // footer Div
+bundle.header();           // GridHeader — call to build the full header component
+```
+
+### PropertySet-based listing (non-bean)
+
+```java
+// Components.listing(PropertySet) → PropertyListingBundleBuilder → ListingBundle<PropertyBox>
+ListingBundle<PropertyBox> bundle = Components.listing(BillModel.LISTING)
+    .search("Search...")
+    .withFilterPanel()
+    .gridHeader("Bills")
+    .fetch(q -> {  // returns List<PropertyBox>
+        return datastoreHelper.getDatastore()
+            .query(BillModel.TARGET)
+            .list(BillModel.LISTING);
+    })
     .build();
-
-// Read value
-String name = nameInput.getValue();
-
-// Set value
-nameInput.setValue("ACME Corp");
 ```
 
 ---
 
-## Localization (Holon i18n for UI text)
+## `EntityFormPanel` (entity form with save/cancel)
 
-Use Holon i18n for all user-visible strings.
+`EntityFormPanel<T>` wraps a `BeanPropertyInputForm` in a panel with Save, Clear, and
+optionally Cancel / Save-and-New buttons. It is the standard form component for
+create/edit screens.
 
-- Labels: `bill.vendorName`, `bill.invoiceDate`, `bill.totalAmount`
-- Buttons: `bill.save`, `bill.approve`, `bill.reject`
-- Notifications/errors: `bill.approved`, `error.validation`
-
-If a generated snippet shows literal text (for readability), keep a comment with the expected
-Holon i18n key beside it and treat the literal as fallback text.
+### FormLayout layout (default)
 
 ```java
-// Example convention for generated UI text:
-// key: bill.vendorName, fallback: "Vendor Name"
-Input<String> vendorNameInput = Components.input.string()
-    .label("Vendor Name")
-    .required()
+import com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel;
+
+EntityFormPanel<Bill> form = EntityFormPanel.bean(Bill.class)
+    .saveButton(btn -> btn.text("Save bill"), bill -> {
+        svc.save(bill);
+        NotificationUtil.notificationSuccess("Bill saved");
+        Navigator.get().navigateTo(BillListView.class);
+    })
+    .cancelButton(btn -> btn.text("Cancel"),
+        () -> Navigator.get().navigateBack())
     .build();
 
-// key: bill.save, fallback: "Save"
-Button saveButton = Components.button()
-    .text("Save")
-    .onClick(e -> save())
+// Populate for edit:
+form.setBean(existingBill);
+
+// Read back after save callback fires:
+Bill updated = form.getBean();
+```
+
+### Div-based layout (grid-div, no FormLayout)
+
+```java
+EntityFormPanel<Bill> form = EntityFormPanel.beanDiv(Bill.class)
+    .saveButton(btn -> {}, bill -> svc.save(bill))
+    .clearButton(btn -> btn.text("Reset"))
     .build();
+```
+
+### BeanBuilder key options
+
+```java
+EntityFormPanel.bean(Bill.class)
+    .layout(EntityFormPanel.LayoutMode.FORM)        // FORM (default) or GRID_DIV
+    .responsiveSteps(steps -> steps                 // override responsive breakpoints
+        .step("0", 1).step("40em", 2).step("60em", 3))
+    .properties("vendorName", "invoiceDate", "status")  // show only these fields
+    .required("vendorName", "Vendor name is required")  // add required validator
+    .bind("status", Components.input.singleSelect(String.class)
+        .items("PENDING_REVIEW", "APPROVED", "REJECTED").build())  // custom input for field
+    .bind(BillModel.TOTAL_AMOUNT,
+        Components.input.number(BigDecimal.class).build())         // bind by property
+    .saveButton(btn -> btn.text("Save"), bill -> save(bill))
+    .saveAndNewButton(btn -> btn.text("Save & new"), bill -> saveAndNew(bill))
+    .clearButton(btn -> {})
+    .cancelButton(btn -> {}, this::goBack)
+    .noFooter()                            // hide the button footer (manage buttons yourself)
+    .title("New Bill")                     // optional panel title
+    .bordered(true)                        // draw card border
+    .readOnly()                            // render all fields read-only
+    .withBean(initialBean)                 // pre-populate before build()
+    .withPostProcessor((layout, property, input) -> {
+        // post-process any input after form is built
+    })
+    .autoRequiredIndicators(true)          // infer required from @NotNull/@NotBlank annotations
+    .build();
+```
+
+### Interacting after build
+
+```java
+form.setBean(bean);          // populate the form
+form.getBean();              // read bean (validates first — throws on invalid)
+form.getBean(false);         // read bean without validating
+form.validate();             // returns true if all inputs are valid
+form.setReadOnly(true);      // toggle read-only mode
+form.getForm();              // access the underlying PropertyInputForm
+form.getSaveButton();        // Button
+form.getClearButton();       // Button
+```
+
+---
+
+## Master-Detail layout (`MasterDetailLayout`)
+
+Use `Components.masterDetail(MyBean.class)` for the canonical list-on-left / detail-on-right
+two-panel pattern with automatic responsive behaviour (desktop split, mobile sheet/navigation).
+
+```java
+import com.iyensoft.vaadin.flow.components.MasterDetailLayout;
+
+MasterDetailLayout<Bill> layout = Components.<Bill>masterDetail(Bill.class)
+    .master(master -> master
+        .listing(svc::findAll)          // supplies the ListingBundle
+        .columns("vendorName", "invoiceDate", "status")
+        .search("Search bills...")
+        .withEditAction(bill -> {})     // optional row edit action
+    )
+    .detail(detail -> detail
+        .content(bill -> buildDetailView(bill))   // returns a Component for selected item
+    )
+    .withMobileSheet(Sheet.Side.BOTTOM) // mobile: open detail in a bottom sheet
+    .withUrlSync(                        // optional: sync selected item id to URL
+        bill -> String.valueOf(bill.getId()),
+        id -> svc.findById(Long.valueOf(id)))
+    .build();
+
+add(layout);
+```
+
+**Desktop:** listing fills the left column, detail fills the right. Clicking a row syncs the
+detail panel automatically.
+
+**Mobile:** listing fills the screen; row click opens detail in a Sheet (slide-over).
+
+---
+
+## Input components (`Components.input`)
+
+All inputs are accessed through `Components.input.*`. Every builder returns a
+`ValidatableInput<T>` or one of its subtypes.
+
+```java
+import com.holonplatform.vaadin.flow.components.Components;
+
+// Text
+Input<String>   name   = Components.input.string().label("Name").build();
+Input<String>   notes  = Components.input.stringArea().label("Notes").build();
+Input<String>   pwd    = Components.input.password().label("Password").build();
+
+// Numbers
+Input<Integer>  qty    = Components.input.number(Integer.class).label("Qty").build();
+Input<BigDecimal> amt  = Components.input.number(BigDecimal.class).label("Amount").build();
+
+// Dates/Times
+Input<LocalDate>     ld  = Components.input.localDate().label("Date").build();
+Input<LocalDateTime> ldt = Components.input.localDateTime().label("Date & Time").build();
+Input<LocalTime>     lt  = Components.input.localTime().label("Time").build();
+
+// Boolean
+Input<Boolean> active = Components.input.boolean_().label("Active").build();
+
+// Enum single-select (combobox)
+Input<Status> status = Components.input.enumSelect(Status.class)
+    .label("Status").build();
+
+// Enum radio buttons
+Input<Status> status = Components.input.enumOptionSelect(Status.class)
+    .label("Status").build();
+
+// String single-select with items
+Input<String> country = Components.input.singleSelect(String.class)
+    .label("Country")
+    .items("DE", "FR", "IT", "ES")
+    .build();
+
+// Multi-select checkboxes
+Input<Set<String>> tags = Components.input.multiOptionSelect(String.class)
+    .label("Tags")
+    .items("Design", "Tech", "Finance")
+    .build();
+
+// Multi-select list
+Input<Set<String>> perms = Components.input.multiListSelect(String.class)
+    .label("Permissions")
+    .items("read", "write", "admin")
+    .build();
+```
+
+### Adding validators
+
+```java
+Input<String> email = Components.input.string()
+    .label("Email")
+    .required("Email is required")
+    .withValidator(Validator.email())
+    .build();
+```
+
+### Binding standalone inputs to form group
+
+```java
+PropertyInputGroup group = Components.input.propertyGroup(BillModel.LISTING)
+    .build();
+
+// Read/write as PropertyBox:
+PropertyBox values = group.getValue();
+group.setValue(existingBox);
+```
+
+---
+
+## Layout builders
+
+Prefer Holon layout builders over raw Vaadin layout constructors.
+
+```java
+// VerticalLayout
+VerticalLayout vl = Components.vl()
+    .spacing(true).padding(true).fullWidth()
+    .add(component1, component2)
+    .build();
+
+// HorizontalLayout
+HorizontalLayout hl = Components.hl()
+    .spacing(true).alignItems(FlexComponent.Alignment.CENTER)
+    .add(comp1, comp2)
+    .build();
+
+// FormLayout with responsive steps
+FormLayout form = Components.formLayout()
+    .responsiveSteps(steps -> steps
+        .step("0", 1)
+        .step("40em", 2)
+        .step("60em", 3))
+    .add(nameInput, emailInput)
+    .build();
+
+// Holon Layout (vaadinplus — more flexible than VerticalLayout)
+Layout layout = Components.layout(comp1, comp2);
+
+// Row/Column grid
+var row = Components.row()
+    .add(Components.column().add(nameInput).build(),
+         Components.column().add(emailInput).build())
+    .build();
+
+// FlexBoxLayout
+FlexBoxLayout fbl = Components.flexBoxLayout()
+    .flexWrap(FlexLayout.WrapMode.WRAP)
+    .add(comp1, comp2)
+    .build();
+
+// SplitLayout
+var split = Components.splitLayout()
+    .orientation(SplitLayout.Orientation.HORIZONTAL)
+    .primaryStyle("min-width", "300px")
+    .build();
+```
+
+### Predefined responsive step maps (from `UIUtils`)
+
+```java
+import com.holonplatform.vaadin.flow.components.utils.UIUtils;
+
+// Use predefined responsive step sets in FormLayout builders:
+UIUtils.FIXED_COLUMNS_SMALL      // xs:1, sm:2
+UIUtils.FIXED_COLUMNS_MEDIUM     // xs:1, sm:2, md:3
+UIUtils.FIXED_COLUMNS_LARGE      // xs:1, sm:2, md:3, lg:4
+UIUtils.FLEXIBLE_COLUMNS         // fully fluid
 ```
 
 ---
@@ -188,276 +525,561 @@ Button saveButton = Components.button()
 ## Buttons
 
 ```java
-// Standard button
-Button saveButton = Components.button()
+// Fluent builder
+Button save = Components.button()
     .text("Save")
-    .onClick(e -> save())
+    .icon(VaadinIcon.CHECK)
+    .primary()                      // LUMO primary theme
+    .onClick(e -> handleSave())
     .build();
 
-// Themed
-Button approveButton = Components.button()
-    .text("Approve")
-    .themeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS)
-    .onClick(e -> approve())
+// Quick factory
+Button cancel = Components.button("Cancel", e -> Navigator.get().navigateBack());
+Button iconBtn = Components.button("Export", VaadinIcon.DOWNLOAD.create(), e -> export());
+```
+
+---
+
+## Labels and text
+
+```java
+var title   = Components.h2().text("Invoices").build();
+var caption = Components.span().text("12 records").className("muted").build();
+var body    = Components.label().html("<b>Note:</b> required fields...").build();
+var h4      = Components.title().text("Summary").build();   // h4 title style
+```
+
+---
+
+## Tabs and Accordion
+
+```java
+// TabSheet
+var tabs = Components.tabSheet()
+    .tab("Details", detailsComponent)
+    .tab("Contacts", contactsComponent)
     .build();
 
-// Conditional visibility (Holon Auth guard)
-approveButton.setVisible(
-    AuthContext.require().isPermitted("bills:approve"));
+// Lazy tabs (content loaded on first activation)
+var lazyTabs = Components.lazyTabs()
+    .tab("Details", () -> buildDetails())
+    .tab("Contacts", () -> buildContacts())
+    .build();
+
+// Accordion
+var accordion = Components.accordion()
+    .section("Section 1", section1Content)
+    .section("Section 2", section2Content)
+    .build();
 ```
 
 ---
 
-## Notifications
+## Side navigation (`SideNav`)
 
 ```java
-// Success
-Notification.show("Bill approved.", 3000, Notification.Position.BOTTOM_END);
-
-// Error  (FALLBACK: no Holon Notification API for error styling)
-// FALLBACK: no Holon equivalent for error-themed notifications
-Notification error = new Notification("Error: " + message, 5000, Notification.Position.MIDDLE);
-error.addThemeVariants(NotificationVariant.LUMO_ERROR);
-error.open();
+var nav = Components.sideNav()
+    .withItem("Dashboard", VaadinIcon.DASHBOARD, DashboardView.class)
+    .withItem("Bills",     VaadinIcon.FILE_TEXT, BillListView.class)
+    .withItem("Customers", VaadinIcon.USERS,     CustomerListView.class)
+    .build();
 ```
 
 ---
 
-## Dialog (confirmation)
+## Cards and Panels
 
 ```java
-// FALLBACK: no Holon equivalent for a generic confirmation dialog
-// FALLBACK: no Holon equivalent for ConfirmDialog component
-import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+// Card — lightweight content container
+var card = Components.card()
+    .header("Customer Summary")
+    .content(summaryContent)
+    .build();
 
-ConfirmDialog dialog = new ConfirmDialog(
-    "Confirm Rejection",
-    "Are you sure you want to reject this bill?",
-    "Reject", e -> svc.reject(selectedBill.getId()),
-    "Cancel", e -> {}
-);
-dialog.open();
+// Panel — titled bordered container
+var panel = Components.panel()
+    .title("Billing Details")
+    .content(billingForm)
+    .build();
 ```
 
 ---
 
-## Master-detail layout
+## Alerts and Dialogs
+
+### Inline alert (banner)
 
 ```java
-@Route("bills")
+import com.holonplatform.vaadin.flow.vaadinplus.components.Alert;
+
+var alert = Components.alert(Alert.Variant.WARNING)
+    .title("Attention")
+    .description("This action cannot be undone.")
+    .build();
+
+add(alert);
+```
+
+### Alert modal (dialog-style)
+
+```java
+Components.alertModal(Alert.Variant.ERROR)
+    .title("Validation error")
+    .description("Please fix the highlighted fields.")
+    .closeButton()
+    .open();
+```
+
+### Alert dialog (confirm dialog)
+
+```java
+Components.alertDialog()
+    .title("Delete bill?")
+    .description("This will permanently remove the record.")
+    .confirmButton(btn -> btn.text("Delete"), () -> {
+        svc.delete(bill);
+        NotificationUtil.notificationSuccess("Bill deleted.");
+    })
+    .cancelButton()
+    .open();
+```
+
+---
+
+## Notifications (`NotificationUtil`)
+
+```java
+import com.holonplatform.vaadin.flow.components.utils.NotificationUtil;
+
+NotificationUtil.notificationSuccess("Bill saved successfully.");
+NotificationUtil.notificationError("Failed to save bill. Please try again.");
+NotificationUtil.notificationWarning("Draft saved — remember to submit.");
+
+// Validation exception (shows all field errors):
+NotificationUtil.notificationError(validationException);
+```
+
+---
+
+## Sheet (slide-over panel)
+
+```java
+import com.holonplatform.vaadin.flow.vaadinplus.components.Sheet;
+
+// Bottom sheet
+var sheet = Components.sheet(Sheet.Side.BOTTOM)
+    .title("Bill detail")
+    .content(detailComponent)
+    .build();
+
+// Open / close
+sheet.open();
+sheet.close();
+
+// Sheet stack (multiple sheets stacked)
+var stack = Components.sheetStack(Sheet.Side.RIGHT);
+stack.push(sheet1);
+stack.push(sheet2);
+stack.pop();
+```
+
+---
+
+## Stepper / Timeline
+
+```java
+// Step progress indicator
+var stepper = Components.stepper()
+    .step("Organization").step("Contact").step("Financial").step("Review")
+    .current(0)
+    .build();
+
+// Vertical timeline
+var timeline = Components.timelineStepper()
+    .step("Created", "2025-01-01", VaadinIcon.CIRCLE, done -> {})
+    .step("Approved", "2025-01-03", VaadinIcon.CHECK_CIRCLE, done -> {})
+    .build();
+```
+
+---
+
+## Avatar and AvatarGroup
+
+```java
+var avatar = Components.avatar("AT")         // initials
+    .name("Atelier Tremblay")                // tooltip
+    .colorIndex(2)
+    .build();
+
+var group = Components.avatarGroup()
+    .add(Components.avatar("AT").build())
+    .add(Components.avatar("BG").build())
+    .maxItemsVisible(3)
+    .build();
+```
+
+---
+
+## Breadcrumb
+
+```java
+var crumb = Components.breadcrumb()
+    .item("CRM", CustomerListView.class)
+    .item("Customers", CustomerListView.class)
+    .item("New customer")
+    .build();
+```
+
+---
+
+## `FilterInputForm` (filter bar)
+
+Use `FilterInputForm` when you need a standalone filter bar separate from the
+`ListingBundle`'s built-in filter panel.
+
+```java
+FilterInputForm<FormLayout> filters = FilterInputForm.formLayout()
+    .property(BillModel.STATUS,
+        Components.input.singleSelect(String.class)
+            .items("PENDING_REVIEW", "APPROVED", "REJECTED").build())
+    .property(BillModel.VENDOR_NAME, Components.input.string().build())
+    .build();
+
+// Get the current QueryFilter from user input:
+Optional<QueryFilter> activeFilter = filters.getFilter();
+
+// Listen to filter changes:
+filters.addFilterChangeListener(e ->
+    bundle.listing().setDataProvider(...));
+```
+
+---
+
+## Kanban board (`KanbanBoard`)
+
+```java
+import com.holonplatform.vaadin.flow.components.KanbanBoard;
+
+var kanban = KanbanBoard.<Bill, String>builder()
+    .columns(List.of(
+        KanbanColumn.of("PENDING_REVIEW", "Pending review"),
+        KanbanColumn.of("APPROVED", "Approved"),
+        KanbanColumn.of("REJECTED", "Rejected")
+    ))
+    .cardRenderer(bill -> {
+        var card = Components.card().content(Components.span().text(bill.getVendorName()).build()).build();
+        return card;
+    })
+    .itemIdentifierProvider(bill -> String.valueOf(bill.getId()))
+    .itemColumnProvider(Bill::getStatus)
+    .itemColumnUpdater(Bill::setStatus)
+    .moveHandler((bill, newStatus) -> { svc.save(bill); return true; })
+    .countProvider((col, filter) -> (long) svc.findAll(col.getId()).count())
+    .build();
+
+kanban.setItems(svc.findAll().toList());
+add(kanban.getComponent());
+```
+
+---
+
+## Auth guards
+
+```java
+// Declarative — on every @Route that requires a permission
+@Route(value = "bills", layout = MainLayout.class)
 @Permitted("bills:view")
-public class BillMasterDetailView extends HorizontalLayout {
+public class BillListView extends VerticalLayout { ... }
 
-    private final EntityPanelForm<Bill> detailForm;
-
-    public BillMasterDetailView() {
-        Datastore ds = Context.get().resource(Datastore.CONTEXT_KEY, Datastore.class).orElseThrow();
-
-        ListingBundle<Bill> bundle = ListingBundle
-            .builder(Bill.PROPERTIES)
-            .dataSource(ds, Bill.PROPERTIES.getDataPath())
-            .selectionMode(SelectionMode.SINGLE)
-            .withSelectionListener(e -> e.getFirstSelectedItem().ifPresent(this::showDetail))
-            .build();
-
-        detailForm = EntityPanelForm.builder(Bill.PROPERTIES).build();
-
-        setSizeFull();
-        add(bundle, detailForm);
-        setFlexGrow(2, bundle);
-        setFlexGrow(1, detailForm);
-    }
-
-    private void showDetail(Bill bill) {
-        detailForm.setBean(bill);
-    }
+// Programmatic — for fine-grained per-action control
+AuthContext auth = AuthContext.require();
+if (!auth.isPermitted("bills:approve")) {
+    approveButton.setVisible(false);
 }
+
+// Role check
+if (auth.isPermitted(Permission.create("ROLE_ADMIN"))) { ... }
 ```
 
 ---
 
-## Responsive layout
+## CSS utility classes
 
-### Application shell — AppLayout + SideNav
-
-Wrap every application in a `MainLayout` that provides a collapsible side drawer on desktop and
-a hamburger-menu on mobile. All `@Route` views opt in via `layout = MainLayout.class`.
-
-Load custom CSS with `@StyleSheet` pointing to a static file under `src/main/resources/META-INF/resources/`
-(the Vaadin 25 recommended approach — no `@Theme` / frontend bundle required).
+Holon exposes CSS helpers in `com.holonplatform.vaadin.flow.components.css.*`:
 
 ```java
-// FALLBACK: no Holon equivalent for AppLayout, DrawerToggle, SideNav, or @StyleSheet
-import com.vaadin.flow.component.applayout.AppLayout;
-import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.orderedlayout.Scroller;
-import com.vaadin.flow.component.sidenav.SideNav;
-import com.vaadin.flow.component.sidenav.SideNavItem;
-import com.vaadin.flow.server.LoadDependenciesOnStartup;
-import com.vaadin.flow.component.dependency.StyleSheet;
+import com.holonplatform.vaadin.flow.components.css.*;
 
-// Load custom CSS from src/main/resources/META-INF/resources/themes/my-app/styles.css
-// FALLBACK: no Holon equivalent for @StyleSheet CSS loading
-@StyleSheet("context://themes/my-app/styles.css")
-public class MainLayout extends AppLayout {
-
-    public MainLayout() {
-        // FALLBACK: no Holon equivalent for AppLayout application shell
-        DrawerToggle toggle = new DrawerToggle();
-
-        H1 title = new H1("My App");
-        title.addClassName("app-title");
-
-        SideNav nav = new SideNav();
-        nav.addItem(new SideNavItem("Orders", OrderListView.class));
-        nav.addItem(new SideNavItem("Customers", CustomerListView.class));
-
-        Scroller scroller = new Scroller(nav);
-        scroller.setClassName("nav-scroller");
-
-        addToDrawer(scroller);
-        addToNavbar(toggle, title);
-        setPrimarySection(Section.DRAWER);
-    }
-}
-```
-
-Reference the layout from every view:
-
-```java
-@Route(value = "orders", layout = MainLayout.class)
-@Permitted("orders:view")
-public class OrderListView extends VerticalLayout { ... }
+component.addClassName(FontSize.SMALL.className());
+component.addClassName(FontWeight.BOLD.className());
+component.addClassName(TextColor.SECONDARY.className());
+component.addClassName(Shadow.S.className());
+component.addClassName(BorderRadius.M.className());
+component.addClassName(Overflow.AUTO.className());
+component.addClassName(Padding.Uniform.S.className());
 ```
 
 ---
 
-### Responsive input toolbar — FormLayout
-
-Replace bare `HorizontalLayout` input bars with `FormLayout` + `setResponsiveSteps()`.
-Inputs collapse into a single column on mobile and expand to multiple columns on wider screens.
+## `UIUtils` helpers
 
 ```java
-// FALLBACK: no Holon equivalent for FormLayout responsive steps
-import com.vaadin.flow.component.formlayout.FormLayout;
+import com.holonplatform.vaadin.flow.components.utils.UIUtils;
 
-Input<String> nameInput   = Components.input.string().label("Name").required().build();
-Input<String> statusInput = Components.input.singleSelect(String.class)
-                                .label("Status").items("ACTIVE","INACTIVE").build();
-Button saveButton = Components.button().text("Save")
-                        .themeVariants(ButtonVariant.LUMO_PRIMARY).onClick(e -> save()).build();
+// Search input with Holon styling
+Input<String> search = UIUtils.createSearchField();
 
-// FALLBACK: no Holon equivalent for FormLayout responsive steps
-FormLayout toolbar = new FormLayout();
-toolbar.setResponsiveSteps(
-    new FormLayout.ResponsiveStep("0",    1),    // 1 column on phones
-    new FormLayout.ResponsiveStep("32em", 2),    // 2 columns on tablets
-    new FormLayout.ResponsiveStep("48em", 4));   // 4 columns on desktops
+// Heading
+LabelBuilder<H4> heading = UIUtils.createH4("Customers");
 
-toolbar.add(nameInput.getComponent(), statusInput.getComponent(), saveButton);
+// Change URL without page reload
+UIUtils.setPageUrlWithoutReloading(UI.getCurrent(), "/bills/" + id);
+
+// Clear container children
+UIUtils.clearContainer(verticalLayout);
+
+// Handle empty results in a container
+UIUtils.handleNoRecordsFound(verticalLayout);
+UIUtils.handleNoValuesFound(verticalLayout);
 ```
 
 ---
 
-### Professional button variants
+## Internationalisation (I18N)
 
-Always apply `ButtonVariant` theme variants so intent is visually clear at every screen size.
+Holon provides its own I18N stack via `LocalizationContext` (core) and
+`LocalizationContextI18NProvider` / `LocalizationProvider` (Vaadin bridge).
+**Never use raw Vaadin `I18NProvider` or Spring `MessageSource` directly.**
+
+### 1. `Localizable` — the unit of translatable text
 
 ```java
-// Primary action
-Button saveButton = Components.button()
-    .text("Save")
-    .themeVariants(ButtonVariant.LUMO_PRIMARY)
-    .onClick(e -> save())
-    .build();
+import com.holonplatform.core.i18n.Localizable;
 
-// Destructive / archive action
-Button deleteButton = Components.button()
-    .text("Archive")
-    .themeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_TERTIARY)
-    .onClick(e -> archive())
-    .build();
+// message code only (falls back to code if no translation found):
+Localizable key = Localizable.of("bill.vendorName.label");
 
-// Positive / approve action
-Button approveButton = Components.button()
-    .text("Approve")
-    .themeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS)
-    .onClick(e -> approve())
+// message code + inline default (used when no provider or key missing):
+Localizable key = Localizable.of("bill.vendorName.label", "Vendor name");
+
+// builder form (supports argument placeholders):
+Localizable msg = Localizable.builder()
+    .messageCode("bill.saved.msg")
+    .message("Bill {0} saved successfully")
+    .messageArguments(bill.getInvoiceNo())
     .build();
 ```
 
----
-
-### Lumo theme overrides (`styles.css`)
-
-Place custom CSS in `src/main/resources/META-INF/resources/themes/<app-name>/styles.css`.
-Reference it from `MainLayout` via `@StyleSheet("context://themes/<app-name>/styles.css")`.
-This is the Vaadin-recommended approach: static CSS served directly, no frontend build needed.
-
-```css
-/* src/main/resources/META-INF/resources/themes/my-app/styles.css */
-
-:root {
-  /* Brand primary */
-  --lumo-primary-color: #003580;
-  --lumo-primary-contrast-color: #ffffff;
-  --lumo-primary-color-10pct: rgba(0, 53, 128, 0.1);
-  --lumo-primary-color-50pct: rgba(0, 53, 128, 0.5);
-
-  /* Semantic */
-  --lumo-success-color: #1a7a4a;
-  --lumo-error-color:   #b91c1c;
-
-  /* Typography */
-  --lumo-font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
-  --lumo-font-size-m: 0.875rem;
-
-  /* Shape */
-  --lumo-border-radius-m: 6px;
-}
-
-/* Header title */
-.app-title {
-  font-size: var(--lumo-font-size-l);
-  font-weight: 700;
-  margin: 0 var(--lumo-space-m);
-}
-
-/* Side-nav drawer fills full height */
-.nav-scroller {
-  height: 100%;
-}
-
-/* Toolbar / form card above each listing */
-.toolbar-card {
-  padding: var(--lumo-space-m);
-  background: var(--lumo-contrast-5pct);
-  border-bottom: 1px solid var(--lumo-contrast-10pct);
-}
-```
-
----
-
-### Responsive layout checklist
-
-Every view that presents a data listing or collects user input MUST satisfy all of the following
-before emitting code:
-
-- [ ] View is nested inside `MainLayout` via `@Route(value = "...", layout = MainLayout.class)`
-- [ ] Input toolbars use `FormLayout` with `setResponsiveSteps(...)` — never a bare `HorizontalLayout`
-- [ ] All action buttons carry an appropriate `ButtonVariant` (`LUMO_PRIMARY`, `LUMO_ERROR`, etc.)
-- [ ] All visual tokens (colours, fonts, spacing) live in `styles.css`, not hard-coded in Java
-- [ ] Error notifications use `NotificationVariant.LUMO_ERROR`; success notifications include a duration and position
-
----
-
-## Vaadin fallback policy (summary)
-
-Use raw Vaadin (`com.vaadin.flow.component.*`) only when Holon Vaadin Flow has no
-equivalent. Confirm using the Vaadin MCP server (`https://mcp.vaadin.com/docs`) or
-the JavaDocs MCP server. Always precede the import/usage with:
+### 2. Building a `LocalizationContext`
 
 ```java
-// FALLBACK: no Holon equivalent for <describe the specific component or behavior>
+import com.holonplatform.core.i18n.LocalizationContext;
+import com.holonplatform.core.i18n.MessageProvider;
+
+// In a @Bean or @SpringBootApplication configuration class:
+@Bean
+public LocalizationContext localizationContext() {
+    return LocalizationContext.builder()
+        .withInitialSystemLocale()                          // start with JVM default locale
+        .withMessageProvider(
+            MessageProvider.fromProperties("i18n/messages") // src/main/resources/i18n/messages_en.properties, etc.
+        )
+        .build();
+}
 ```
+
+`MessageProvider.fromProperties(baseName)` loads `.properties` files from the classpath
+using the standard `basename_<locale>.properties` convention.
+
+### 3. Bridging into Vaadin (`LocalizationContextI18NProvider`)
+
+```java
+import com.holonplatform.vaadin.flow.i18n.LocalizationContextI18NProvider;
+
+// Implement Vaadin's I18NProvider via the Holon LocalizationContext:
+@Bean
+public LocalizationContextI18NProvider i18nProvider(LocalizationContext ctx) {
+    // Declare supported locales:
+    return LocalizationContextI18NProvider.create(ctx,
+        List.of(Locale.ENGLISH, Locale.FRENCH, Locale.GERMAN));
+}
+```
+
+Register it so Vaadin picks it up:
+
+```java
+// application.properties
+com.vaadin.i18n-provider=com.holonplatform.vaadin.flow.internal.i18n.DefaultLocalizationContextI18NProvider
+```
+
+Or register the bean as a `@Service` that implements `I18NProvider` — Vaadin auto-detects it.
+
+### 4. Resolving messages at runtime (`LocalizationProvider`)
+
+```java
+import com.holonplatform.vaadin.flow.i18n.LocalizationProvider;
+
+// Resolve against the current session locale:
+Optional<String> label = LocalizationProvider.localize(
+    Localizable.of("bill.vendorName.label", "Vendor name"));
+
+// Convenience overload with inline default:
+String text = LocalizationProvider.localize(
+    "bill.vendorName.label", "Vendor name");
+
+// Resolve with explicit locale:
+String text = LocalizationProvider.getLocalization(
+    Locale.FRENCH, "bill.vendorName.label", "Vendor name");
+```
+
+### 5. Localizable labels in component builders
+
+Every Holon component builder that exposes `.label()`, `.placeholder()`, `.helperText()`,
+or `.title()` accepts a `Localizable` directly — **always prefer the `Localizable` overload**
+so the label is live-translated when the locale changes:
+
+```java
+Input<String> name = Components.input.string()
+    .label(Localizable.of("customer.name.label", "Name"))
+    .placeholder(Localizable.of("customer.name.placeholder", "Enter full name"))
+    .helperText(Localizable.of("customer.name.helper", "As on the invoice"))
+    .build();
+
+Button save = Components.button()
+    .text(Localizable.of("action.save", "Save"))
+    .build();
+```
+
+### 6. Language switcher in the AppShell
+
+```java
+AppShellLayout.builder()
+    .languages(Locale.ENGLISH, Locale.FRENCH, Locale.GERMAN)  // renders a locale selector in the navbar
+    .configure(this);
+```
+
+When the user picks a locale the `LocalizationContext` is updated and all `Localizable`-bound
+labels re-render automatically.
+
+### 7. `properties` file conventions
+
+Place files under `src/main/resources/i18n/`:
+
+```
+i18n/messages.properties          ← default / English fallback
+i18n/messages_fr.properties       ← French
+i18n/messages_de.properties       ← German
+```
+
+Key naming convention: `<feature>.<field>.<role>`, e.g.:
+
+```properties
+# messages.properties
+bill.vendorName.label=Vendor name
+bill.vendorName.placeholder=Enter vendor name
+bill.status.label=Status
+action.save=Save
+action.cancel=Cancel
+```
+
+---
+
+## Accessibility (A11Y)
+
+Holon exposes accessibility attributes through its configurator interfaces.
+**Never call raw Vaadin `getElement().setAttribute("aria-label", ...)` or
+`setAriaLabel()` directly** — use the Holon configurator methods so labels
+can also be `Localizable`-aware.
+
+### 1. ARIA labels (`HasAriaLabelConfigurator`)
+
+All interactive component builders (`Input`, `Button`, `Components.listing`, etc.)
+implement `HasAriaLabelConfigurator`:
+
+```java
+// Plain string ARIA label:
+Button deleteBtn = Components.button()
+    .icon(VaadinIcon.TRASH)
+    .ariaLabel("Delete bill")        // screen reader announces "Delete bill"
+    .onClick(e -> confirmDelete())
+    .build();
+
+// Localizable ARIA label (preferred):
+Button deleteBtn = Components.button()
+    .icon(VaadinIcon.TRASH)
+    .ariaLabel(Localizable.of("bill.action.delete.aria", "Delete bill"))
+    .onClick(e -> confirmDelete())
+    .build();
+
+// ariaLabelledBy — reference another element's id:
+Button deleteBtn = Components.button()
+    .icon(VaadinIcon.TRASH)
+    .ariaLabelledBy("delete-heading")
+    .build();
+```
+
+### 2. Labels, placeholders, and helper text (all accessibility signals)
+
+Every visible label, placeholder, and helper is also an a11y signal. Use `Localizable`
+overloads consistently:
+
+```java
+Input<String> email = Components.input.string()
+    .label(Localizable.of("customer.email.label", "Email address"))
+    .placeholder(Localizable.of("customer.email.placeholder", "name@example.com"))
+    .helperText(Localizable.of("customer.email.helper",
+        "We'll use this for invoice delivery"))
+    .required(Localizable.of("customer.email.required", "Email is required"))
+    .build();
+```
+
+### 3. Icon-only buttons must always have an ARIA label
+
+An icon-only button without a visible label is invisible to screen readers:
+
+```java
+// WRONG — screen reader cannot announce this:
+Button bad = Components.button().icon(VaadinIcon.TRASH).build();
+
+// CORRECT — always add ariaLabel when there is no text:
+Button good = Components.button()
+    .icon(VaadinIcon.TRASH)
+    .ariaLabel(Localizable.of("action.delete.aria", "Delete"))
+    .build();
+```
+
+### 4. Listing column headers
+
+Column headers rendered by `ListingBundle` and `ItemListing` are visible text —
+define them via `Localizable` to keep them translated:
+
+```java
+Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findAll().toList())
+    .columnHeader("vendorName",
+        Localizable.of("bill.column.vendorName", "Vendor"))
+    .columnHeader("invoiceDate",
+        Localizable.of("bill.column.invoiceDate", "Invoice date"))
+    .build();
+```
+
+### 5. Form sections and group labels
+
+When grouping fields, use a visible heading so AT users understand the structure:
+
+```java
+var form = EntityFormPanel.bean(Bill.class)
+    .title(Localizable.of("bill.form.title", "Bill details"))  // panel title = section heading
+    .saveButton(btn -> btn
+        .text(Localizable.of("action.save", "Save"))
+        .ariaLabel(Localizable.of("bill.save.aria", "Save bill")), bill -> save(bill))
+    .build();
+```
+
+### 6. Roles and live regions — when Holon has no equivalent
+
+If you need an ARIA role or live-region attribute that Holon does not expose, **stop and
+ask the developer** rather than reaching for raw Vaadin/HTML element APIs.
+
+> **Rule:** If no Holon A11Y configurator covers the requirement, treat it the same as any
+> missing Holon component — do not fall back silently; surface it to the developer.

@@ -58,18 +58,23 @@ com.vaadin:vaadin-testbench-unit-junit5
                                         — Vaadin Browserless tests
 ```
 
-**Vaadin fallback** — Skills MAY also use:
+**Vaadin core components — BANNED.** Skills MUST NOT emit any import from:
 
 ```
 com.vaadin:vaadin-core
 com.vaadin.flow.component.*
 ```
 
-**Only when Holon Vaadin Flow has no equivalent.** Every such use MUST be preceded by:
+If a UI need cannot be expressed with Holon Vaadin Flow components, the skill MUST
+**stop immediately** and ask the developer:
 
-```java
-// FALLBACK: no Holon equivalent for <describe the specific thing>
-```
+> "There is no Holon Vaadin Flow equivalent for `<describe the specific thing>`.
+> How would you like to handle this? Please provide a custom component, a Holon
+> extension, or an alternative approach before I continue."
+
+Do **not** silently fall back to raw Vaadin. Do **not** emit a `// FALLBACK:` comment
+and continue. Wait for the developer's explicit guidance, then implement exactly what
+they specify.
 
 **Spring stereotypes** — Skills MAY emit `@Service`, `@Component`, and `@Repository`
 **when the class needs to participate in Spring's lifecycle** (e.g. `@Transactional`,
@@ -106,12 +111,13 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 
 | Import / class | Reason | Correct alternative |
 |---------------|--------|---------------------|
+| `com.vaadin:vaadin-core` / `com.vaadin.flow.component.*` | **Raw Vaadin core components are banned.** If no Holon equivalent exists, stop and ask the developer. | Holon Vaadin Flow (`com.holonplatform.vaadin.flow.components.*`); ask developer if no equivalent |
 | `com.holonplatform.core.property.PropertyBox` | **Use `Bean` + `BeanPropertySet` exclusively** | Plain JavaBean + `BeanPropertySet<T>` |
 | `jakarta.persistence.*` / `javax.persistence.*` | JPA annotations — not allowed unless Holon JPA Datastore is required and justified | `@DataPath` / `@Identifier` on plain JavaBean |
 | `org.springframework.data.jpa.*` | Spring Data JPA — replaced by Holon Datastore | `Datastore` + `BeanPropertySet` |
 | `org.springframework.data.repository.*` | Spring Data repositories | `Datastore` + `BeanPropertySet` |
 | `org.springframework.web.bind.annotation.*` | Spring MVC REST — Vaadin IS the UI layer | n/a — no REST layer |
-| `org.springframework.beans.factory.annotation.Autowired` | Field/setter injection — hides dependencies | **constructor injection** (preferred: Holon `Context.get()`) |
+| `org.springframework.beans.factory.annotation.Autowired` | Field/setter injection — hides dependencies | **constructor injection** |
 | `org.springframework.security.core.*` | Spring Security | Holon Auth: `Realm`, `Authenticator`, `AuthContext`, `Permission` |
 | `org.springframework.security.config.*` | Spring Security config | Holon Auth bootstrap + filter-chain wiring only if Holon Auth requires it |
 | `com.vaadin.flow.i18n.I18NProvider` and direct `UI.getCurrent().getTranslation(...)` usage | Keep localization consistent with Holon stack conventions | Holon Core i18n (`Localizable` + `LocalizationContext.require().getMessage(key, fallback)`) |
@@ -181,38 +187,93 @@ public class Order {
 > it automatically for column headers and field labels — no `.columnHeader()` /
 > `.propertyCaption()` calls needed in the view.
 
-### Property set
+### Property set (Model interface)
+
+Declare `BeanPropertySet` and all typed `PathProperty` constants in a companion
+`Model` interface alongside the bean. This makes filter/sort expressions typesafe
+and removes all raw string property lookups from service code.
+
+Use **typed sub-types** wherever available — they expose the richer query expression API:
+- `NumericProperty<T>` → `.count()`, `.sum()`, `.avg()`, `.min()`, `.max()`
+- `StringProperty` → `.contains()`, `.startsWith()`, `.endsWith()`, case-insensitive variants
+- `TemporalProperty<T>` → `.year()`, `.month()`, `.day()`, `.hour()`
+- `BooleanProperty` → `.isTrue()`, `.isFalse()`
 
 ```java
-public static final BeanPropertySet<Order> PROPERTIES =
-    BeanPropertySet.create(Order.class);
+// e.g. OrderModel.java — same feature package as Order.java
+public interface OrderModel {
+    BeanPropertySet<Order> PROPERTY_SET = BeanPropertySet.create(Order.class);
+
+    NumericProperty<Long>       ID         = PROPERTY_SET.propertyNumeric("id");
+    StringProperty              STATUS     = PROPERTY_SET.propertyString("status");
+    TemporalProperty<LocalDateTime> CREATED_AT = PROPERTY_SET.propertyTemporal("createdAt");
+    // ... one constant per bean field
+
+    // Any PropertySet used with the Datastore MUST declare .withIdentifier():
+    PropertySet LISTING = PropertySet.builderOf(ID, STATUS, CREATED_AT)
+        .withIdentifier(ID).build();
+
+    // UI-only subsets (used with form.setBean()) do not need .withIdentifier():
+    PropertySet FORM = PropertySet.builderOf(STATUS, CREATED_AT).build();
+}
 ```
 
-### Persistence (Datastore)
+The bean itself does **not** carry a `PROPERTIES` constant — the Model interface owns it.
+
+### Persistence (BeanDatastoreHelper)
+
+Every service wraps a `BeanDatastoreHelper<T>` instance. **Always use its methods first.**
+Only fall back to the raw `BeanDatastore` / `Datastore` when `BeanDatastoreHelper` has no
+equivalent (add a `// FALLBACK:` comment).
 
 ```java
-// Retrieve Datastore from Holon Context — never @Autowired
-Datastore ds = Context.get()
-    .resource(Datastore.CONTEXT_KEY, Datastore.class)
-    .orElseThrow(() -> new IllegalStateException("Datastore not available in Context"));
+import com.holonplatform.core.datastore.beans.BeanDatastore;
+import com.holonplatform.core.datastore.beans.BeanDatastoreHelper;
 
-// Query
-List<Order> orders = ds.query(PROPERTIES.getDataPath())
-    .filter(PROPERTIES.property("status").eq("PENDING"))
-    .list(PROPERTIES);
+// Construct from the raw Datastore (in the service constructor)
+BeanDatastoreHelper<Order> helper =
+    BeanDatastoreHelper.of(BeanDatastore.of(datastore), Order.class);
 
-// Single record
-Optional<Order> order = ds.query(PROPERTIES.getDataPath())
-    .filter(PROPERTIES.property("id").eq(id))
-    .findOne(PROPERTIES);
+// Find all
+Stream<Order> all = helper.findAll();
 
-// Insert / update
-ds.save(PROPERTIES.getDataPath(), order);   // Bean form — never PropertyBox
+// Find all with filter + sort (use typed PathProperty from the Model interface)
+Stream<Order> pending = helper.findAll(
+    OrderModel.STATUS.eq("PENDING"),
+    OrderModel.CREATED_AT.desc());
 
-// Delete
-ds.delete(PROPERTIES.getDataPath(),
-    PROPERTIES.property("id").eq(id));
+// Find single record
+Optional<Order> order = helper.findFirst(OrderModel.ID.eq(id));
+
+// Save (upsert: insert if @Identifier is null, update otherwise)
+helper.save(order);
+
+// Explicit insert / update
+helper.insert(newOrder);
+helper.update(existingOrder);
+
+// Delete single bean
+helper.delete(order);
+
+// Bulk delete by filter
+helper.bulkDelete(OrderModel.STATUS.eq("REJECTED"));
+
+// Count / exists
+long n  = helper.count(OrderModel.STATUS.eq("PENDING"));
+boolean exists = helper.exists(OrderModel.ID.eq(id));
+
+// Transaction
+helper.withTransaction(tx -> {
+    helper.save(order);
+    helper.save(lineItem);
+    tx.commit();
+    return null;
+});
 ```
+
+See [`references/datastore-patterns.md`](skills/implement/references/datastore-patterns.md)
+for the full method reference including pagination, bulk operations, and the typed Model
+interface pattern.
 
 ### UI (Holon Vaadin Flow)
 
@@ -229,13 +290,10 @@ import com.holonplatform.vaadin.flow.components.ListingBundle;
 @Permitted("orders:view")
 public class OrderListView extends VerticalLayout {
 
-    public OrderListView() {
-        Datastore ds = Context.get()
-            .resource(Datastore.CONTEXT_KEY, Datastore.class).orElseThrow();
-
+    public OrderListView(OrderService orderService) {
         ListingBundle<Order> bundle = ListingBundle
-            .builder(Order.PROPERTIES)
-            .dataSource(ds, Order.PROPERTIES.getDataPath())
+            .builder(OrderModel.PROPERTY_SET)
+            .items(orderService.findAll())
             .build();
 
         add(bundle);
@@ -325,16 +383,19 @@ Optional<String> username = AuthContext.require()
 
 ### Context wiring
 
-```java
-// Register a service in Context (in a Holon Spring Boot auto-config or @Bean)
-Context.get().scope(ContextScope.APPLICATION)
-    .registerResource(BillService.CONTEXT_KEY, new BillService());
+Services are Spring `@Bean`s — inject them via constructor injection into views or other beans.
+The `Datastore` is also a Spring bean registered by the Holon Spring Boot starter; inject it via constructor injection too.
 
-// Retrieve it anywhere
-BillService svc = Context.get()
-    .resource(BillService.CONTEXT_KEY, BillService.class)
-    .orElseThrow();
+```java
+// Correct: Datastore injected via constructor — Spring resolves it from the application context
+@Bean
+public BillService billService(Datastore datastore) {
+    return new BillService(datastore);
+}
 ```
+
+Never use `Context.get()` to look up the `Datastore` in application code — that pattern is
+reserved for framework internals and legacy code only.
 
 ---
 
@@ -371,7 +432,7 @@ Generated code MUST follow these principles in addition to the stack rules above
 
 - **Boundary lives in the service, not the view** — a single service method is the unit of work;
   views never manage transactions.
-- **Prefer Holon `Datastore.requireTransaction()` / `withTransaction(...)`** for multi-statement
+- **Prefer `BeanDatastoreHelper.withTransaction(...)`** for multi-statement
   units of work; a lone `save`/`delete` runs in its own implicit transaction.
 - **Use Spring `@Transactional` only** when a transaction must span multiple Datastore/service
   calls that Holon's transaction API cannot wrap — apply it on the service method, and the class
@@ -381,19 +442,45 @@ Generated code MUST follow these principles in addition to the stack rules above
 
 ## Naming & Package Conventions
 
-- **Packages** — `domain` (beans), `service` (Datastore-backed services), `ui` (views),
-  `security` (Realm/auth config), under a single application root package.
-- **Class-name suffixes** — beans use the entity name (`Bill`); services end in `Service`
-  (`BillService`); views end in `View` (`BillListView`, `BillDetailView`); auth config ends in
-  `RealmConfig` / `Config`.
-- **Constants** — the `BeanPropertySet<T>` constant is `public static final PROPERTIES`;
-  the service `Context` key is `public static final String CONTEXT_KEY`.
+- **Packages — feature-based layout**
+
+  Organise all classes by **feature** (the domain concept they belong to), not by layer.
+  Every class related to a feature lives in that feature's sub-package.
+  Classes that are genuinely cross-cutting and cannot be placed in a single feature go
+  under `shared`.
+
+  ```
+  com.example.<app>
+  ├── customer/           ← everything about customers
+  │   ├── Customer.java           (JavaBean)
+  │   ├── CustomerService.java    (Datastore service)
+  │   └── CustomerListView.java   (Vaadin view)
+  ├── invoice/            ← everything about invoices
+  │   ├── Invoice.java
+  │   ├── InvoiceService.java
+  │   └── InvoiceDetailView.java
+  └── shared/             ← genuinely cross-cutting: auth config, base layout, utilities
+      ├── MainLayout.java         (application shell)
+      └── RealmConfig.java        (Holon Auth / Realm bootstrap)
+  ```
+
+  Rules:
+  - A bean, its `BeanPropertySet`, its service, and its view(s) all live in the **same feature package**.
+  - If a class is used by two or more features and cannot be cleanly owned by either, place it in `shared`.
+  - `shared` must not become a dumping ground — only truly cross-feature classes belong there.
+  - There are no `domain/`, `service/`, or `ui/` layer packages.
+
+- **Class-name suffixes** — beans use the entity name (`Bill`); model interfaces end in `Model` (`BillModel`); services end in `Service` (`BillService`); views end in `View` (`BillListView`, `BillDetailView`); auth config ends in `RealmConfig` / `Config`.
+- **Constants** — `BeanPropertySet` and all `PathProperty` constants live in the `<Entity>Model` interface.
 - **Routes** — `@Route` values are lowercase, hyphenated nouns (`"bills"`, `"bills/approve"`).
 - **Logging** — use SLF4J (`LoggerFactory.getLogger(...)`); never `System.out` / `System.err`.
 
 
 
 - [ ] No `PropertyBox` in emitted code (grep: `PropertyBox`)
+- [ ] Services use `BeanDatastoreHelper<T>` for all persistence; raw `Datastore` / `BeanDatastore` chains only when `BeanDatastoreHelper` has no equivalent (with `// FALLBACK:` comment)
+- [ ] A `<Entity>Model` interface exists per bean with `BeanPropertySet` + typed property constants (`NumericProperty`, `StringProperty`, `TemporalProperty`, `BooleanProperty`, or `PathProperty<T>` as fallback); no raw string property names in service code
+- [ ] Every `PropertySet` that is used with the Datastore (query projections, listings) declares `.withIdentifier(ID)` — UI-only subsets (FORM) are exempt
 - [ ] Data grids use `ListingBundle`; bare `PropertyListing` only with a `// FALLBACK:` justification (grep: `PropertyListing`)
 - [ ] Forms use `EntityPanelForm`; bare `PropertyForm` only with a `// FALLBACK:` justification (grep: `PropertyForm`)
 - [ ] No `@Autowired` — dependencies injected via constructors (grep: `@Autowired`)
@@ -402,15 +489,17 @@ Generated code MUST follow these principles in addition to the stack rules above
 - [ ] No Spring Security imports (unless filter-chain only, with `// FALLBACK:` comment)
 - [ ] No `jakarta.persistence` / `javax.persistence` unless Holon JPA Datastore + justification comment
 - [ ] No Spring Data JPA / Spring Data Repository
-- [ ] Every raw Vaadin use has `// FALLBACK: no Holon equivalent for <thing>`
-- [ ] Services preferably retrieved via `Context.get()`; any Spring bean uses constructor injection
+- [ ] No raw Vaadin core components (`com.vaadin.flow.component.*`) — if no Holon equivalent exists, stop and ask the developer before proceeding
+- [ ] Services injected via constructor into views and other Spring beans; any Spring bean uses constructor injection
 - [ ] Auth guards present on every `@Route` that requires a role/permission
 - [ ] BeanPropertySet constant is `public static final`
 - [ ] Views are thin — persistence/business logic lives in a `*Service` class
-- [ ] Bean state validated in the service before `Datastore.save(...)`; form inputs declare validators
+- [ ] Bean state validated in the service before `helper.save(...)`; form inputs declare validators
+- [ ] `java.util.Date` / `Calendar` properties have `.temporalType(TemporalType.DATE)` or `TemporalType.DATE_TIME` set
+- [ ] Enum properties use `@Converter(builtin=BUILTIN.ENUM_BY_NAME)` or `ENUM_BY_ORDINAL`; Boolean stored as integer uses `NUMERIC_BOOLEAN`
 - [ ] Errors surfaced via Vaadin `Notification`; no empty catch blocks; SLF4J logging (no `System.out`)
 - [ ] Multi-statement units of work run inside a transaction boundary owned by the service
-- [ ] Packages follow `domain` / `service` / `ui` / `security`; classes use the standard suffixes
+- [ ] Packages are feature-based (`customer/`, `invoice/`, etc.); cross-cutting classes go in `shared/`; no `domain/` / `service/` / `ui/` layer packages; classes use the standard suffixes
 - [ ] Flyway migration uses sequences (not `SERIAL` / `IDENTITY`) for PKs
 - [ ] **I18N** — every user-visible string uses `Localizable.of(fallback, key)` or `LocalizationContext.require().getMessage(key, fallback)`; no raw literals; no `getTranslation(...)`
 - [ ] **`@Caption`** — every user-visible bean field carries `@Caption(message = "<fallback>", messageCode = "<domain>.<field>")`; mandatory fields also carry `@NotNull`
