@@ -8,6 +8,13 @@ Skills MUST consult this file when choosing a component. If a Holon component ex
 the job, use it. If **no Holon component exists**, **stop immediately and ask the developer**
 what component or approach to use — do not silently emit raw Vaadin.
 
+> **Shared fluent methods**: every builder listed here also inherits the cross-cutting
+> configurator methods (size, style, visibility, id, label, placeholder, helper text,
+> tooltip, ARIA, icon, prefix/suffix, theme variants, focus, click/key listeners,
+> read-only, required, value-change mode, autocomplete, clear button, regex pattern).
+> See [`configurator-api.md`](configurator-api.md) for the full catalogue — use those
+> methods instead of raw Vaadin `getElement()` / `setWidth` / `addClassName` calls.
+
 ---
 
 ## Package map
@@ -47,7 +54,11 @@ what component or approach to use — do not silently emit raw Vaadin.
 | Filter chip group | `Components.chipGroup()` → `ChipGroup` with `Chip` items |
 | Input group (addons) | `Components.inputGroup()` → `InputGroup` + `InputGroupText` |
 | OTP input | `Components.inputOTP()` → `InputOTP` |
+| HeroStrip card | `Components.heroStrip()` → `HeroStrip` |
+| AR aging bar | `ArAgingBarBuilder.create()` → `ArAgingBar` |
 | KPI / metric card | `Components.highlight(heading, value)` → `Highlight` |
+| Hero-strip KPI card | `Components.heroStrip()` → `HeroStrip` |
+| AR aging bar | `ArAgingBarBuilder.create()` → `ArAgingBar` |
 | Live preview sidebar card | `Components.livePreviewCard(eyebrow)` → `LivePreviewCard` |
 | Progress checklist | `Components.checklistPanel()` → `ChecklistPanel` |
 | Sticky action bar | `Components.stickyActionBar()` → `StickyActionBar` |
@@ -74,7 +85,7 @@ what component or approach to use — do not silently emit raw Vaadin.
 | Boolean checkbox | `Input.boolean_()` | — |
 | Boolean toggle/switch | `Input.boolean_().styleName("switch")` | — |
 | Filterable combo (single) | `Input.singleSelect(String.class).items(...)` | — |
-| Enum select | `Input.enumSelect(MyEnum.class)` | — |
+| Creatable filterable combo | `Input.singleSelect(Long.class).items(...).allowCustomValues(true).onCustomValueSet(v -> ...)` | — |
 | Radio buttons | `Input.singleOptionSelect(String.class).items(...)` | — |
 | List box (single) | `Input.singleListSelect(String.class).items(...)` | — |
 | Checkbox group (multi) | `Input.multiOptionSelect(String.class).items(...)` | — |
@@ -103,6 +114,8 @@ what component or approach to use — do not silently emit raw Vaadin.
 | Slide-in panel (Sheet) | `Components.sheet(Sheet.Side.RIGHT).title("...").content(...).build()` | — |
 | Stacked sheets | `Components.sheetStack(Sheet.Side.RIGHT)` | — |
 | KPI metric card | `Components.highlight(heading, value)` → `Highlight` | — |
+| Hero-strip KPI card | `Components.heroStrip()` → `HeroStrip` (header + tags + cells) | — |
+| AR aging bar | `ArAgingBarBuilder.create()` → `ArAgingBar` (multi-segment bar card) | — |
 | Status pill | `Components.statusBadge("Posted", StatusBadge.Variant.SUCCESS)` | — |
 | Round icon badge | `Components.iconBadge(VaadinIcon.CHECK.create(), Alert.Variant.SUCCESS)` | — |
 | Tag (label chip) | `new Tag(VaadinIcon.CLOCK, Localizable.of("Draft", "tag.draft"))` | — |
@@ -195,14 +208,25 @@ Input<Boolean> sync = Input.boolean_().label(Localizable.of("Sync with LinkedIn"
 ### 5 · Select inputs
 
 ```java
-// Filterable single-select (ComboBox)
-Input<String> industry = Input.singleSelect(String.class)
-    .items("Design & Creative", "Healthcare", "Technology")
-    .label(Localizable.of("Industry", "crm.customer.industry"))
+// Filterable single-select (ComboBox) — items from a lookup service
+Input<Long> statusId = Input.singleSelect(Long.class)
+    .items(statusService.findAll(), StatusLookup::getId, StatusLookup::getName)
+    .label(Localizable.of("Status", "crm.common.status"))
     .build();
 
-// Enum select — @Caption on enum constants drives item labels automatically
-Input<Status> status = Input.enumSelect(Status.class).label(Localizable.of("Status", "crm.common.status")).build();
+// Creatable filterable combo — user can pick an existing lookup value OR type a new one.
+// Use for ALL categorical fields (status, tier, industry, country, department, etc.).
+// The custom value listener saves the new string to the lookup table and refreshes the selection.
+Input<Long> industryId = Input.singleSelect(Long.class)
+    .items(industryService.findAll(), IndustryLookup::getId, IndustryLookup::getName)
+    .label(Localizable.of("Industry", "crm.customer.industry"))
+    .allowCustomValues(true)
+    .onCustomValueSet(newLabel -> {
+        Long newId = industryService.findOrCreate(newLabel); // saves if absent, returns id
+        industryId.refresh(industryService.findAll(), IndustryLookup::getId, IndustryLookup::getName);
+        industryId.setValue(newId);
+    })
+    .build();
 
 // Radio buttons (single-option select)
 Input<String> segment = Input.singleOptionSelect(String.class)
@@ -251,6 +275,11 @@ Shortcut: `Components.button().text("Save").primary().build()` (delegates to `Bu
 
 ### 7 · Form layout
 
+> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For simpler
+> responsive layout prefer the component responsive APIs (`ResponsiveDiv`, `responsiveSteps(...)`);
+> use plain CSS `@media` queries in `styles.css` for complex responsive behaviour. See
+> `css-extraction.md` §"Responsive breakpoints with `@media`".
+
 ```java
 // com.holonplatform.vaadin.flow.components.builders.FormLayoutBuilder
 var layout = FormLayoutBuilder.create()
@@ -273,14 +302,25 @@ var layout = FormLayoutBuilder.create()
 ```java
 EntityFormPanel<Customer> form = EntityFormPanel.bean(Customer.class)
     .properties("name", "industry", "street", "city", "country")
-    .autoLabels(true)       // resolves labels from @Caption(message, messageCode) on bean fields
-    // bind custom input for a field:
-    .bind("industry", Input.singleSelect(String.class)
-        .items("Design & Creative", "Healthcare", "Technology")
-        .label(Localizable.of("Industry", "crm.customer.industry")).build())
-    .bind("country", Input.singleSelect(String.class)
-        .items("Germany", "Austria", "France")
-        .label(Localizable.of("Country", "crm.customer.country")).build())
+    .autoLabels(true)       // resolves labels from @Caption(value, messageCode) on bean fields
+    // bind creatable combobox for lookup-entity fields (user can pick or type a new value):
+    .bind("industryId", Input.singleSelect(Long.class)
+        .items(industryService.findAll(), IndustryLookup::getId, IndustryLookup::getName)
+        .label(Localizable.of("Industry", "crm.customer.industry"))
+        .allowCustomValues(true)
+        .onCustomValueSet(v -> {
+            Long id = industryService.findOrCreate(v);
+            // the bind callback refreshes the field after the listener runs
+        })
+        .build())
+    .bind("countryId", Input.singleSelect(Long.class)
+        .items(countryService.findAll(), CountryLookup::getId, CountryLookup::getName)
+        .label(Localizable.of("Country", "crm.customer.country"))
+        .allowCustomValues(true)
+        .onCustomValueSet(v -> {
+            Long id = countryService.findOrCreate(v);
+        })
+        .build())
     // responsive columns via lambda:
     .responsiveSteps(steps -> steps.mobile(1).tablet(2).desktop(3))
     // required fields with validation message:
@@ -296,7 +336,7 @@ boolean valid = form.validate();
 Customer saved = form.getBean(true);    // true = validate before returning
 ```
 
-**A11Y**: `autoLabels(true)` reads `@Caption` annotations — always annotate every user-visible bean field with `@Caption(message = "fallback", messageCode = "domain.field")`.
+**A11Y**: `autoLabels(true)` reads `@Caption` annotations — always annotate every user-visible bean field with `@Caption(value = "fallback", messageCode = "domain.field")`.
 
 ---
 
@@ -408,10 +448,27 @@ Alert alert = Alert.builder(Alert.Variant.WARNING)
 
 ---
 
-### 14 · Application shell (MainLayout)
+### 14 · Application shell
+
+**`AppShellConfigurator` (theme activation — one per app, typically on `@SpringBootApplication`):**
 
 ```java
-@StyleSheet("context://themes/crm/styles.css")
+import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.component.page.StyleSheet;
+import com.vaadin.flow.theme.lumo.Lumo;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@StyleSheet(Lumo.STYLESHEET)                                    // Lumo base theme — always first
+@StyleSheet("styles.css")                                       // custom overrides in src/main/resources/META-INF/resources/styles.css
+@SpringBootApplication
+public class CrmApplication implements AppShellConfigurator {
+    public static void main(String[] args) { SpringApplication.run(CrmApplication.class, args); }
+}
+```
+
+**`MainLayout` (no `@StyleSheet` here — stylesheets are declared on `AppShellConfigurator` above):**
+
+```java
 public class MainLayout extends AppLayout {
     public MainLayout() {
         var nav = SideNavBuilder.create()                       // com.iyensoft.vaadin.flow.components.builders.SideNavBuilder
@@ -437,7 +494,7 @@ public class MainLayout extends AppLayout {
 
 | Context | Mandatory pattern |
 |---------|------------------|
-| Bean field labels | `@Caption(message = "fallback", messageCode = "domain.field")` on the field; `EntityFormPanel.autoLabels(true)` resolves it |
+| Bean field labels | `@Caption(value = "fallback", messageCode = "domain.field")` on the field; `EntityFormPanel.autoLabels(true)` resolves it |
 | Input label | `Input.string().label(Localizable.of("Account name", "crm.customer.name")).build()` |
 | Input placeholder | `Input.string().placeholder(Localizable.of("Enter name", "crm.customer.name.placeholder")).build()` |
 | Input helper / required | `.helperText(Localizable.of(...))` / `.required(Localizable.of(...))` |
@@ -469,7 +526,7 @@ All keys must exist in `src/main/resources/messages.properties`.
 | Required fields | `.required("field", Localizable.of(...))` on `EntityFormPanel`, or `.required(Localizable.of(...))` on `Input` — Holon sets `aria-required` automatically |
 | Icon-only buttons | Always call `.ariaLabel(Localizable.of(...))` — raw string aria labels are also banned |
 | Data grid | Pass `ariaLabel` in listing configuration |
-| Enum selects | Annotate each enum constant with `@Caption(message, messageCode)` — `Input.enumSelect` uses those automatically |
+| Lookup selects | Every `singleSelect` / `singleOptionSelect` bound to a lookup entity — including creatable combos with `.allowCustomValues(true)` — must call `.label(Localizable.of(...))` — no bare combobox without a label |
 | Skip-to-content | Add a skip link as the first child of `MainLayout` |
 | Heading hierarchy | Use correct `<h1>`→`<h6>` rank; don't use headings for visual styling |
 | Dialogs | `AlertDialog` and `AlertModal` restore focus automatically on close — no manual `focus()` needed |
@@ -484,3 +541,68 @@ All keys must exist in `src/main/resources/messages.properties`.
 | `ButtonGroup` | Carries `role="group"` with a localizable `ariaLabel` |
 | `InputGroup` | Carries `role="group"` with a localizable `ariaLabel` |
 
+
+---
+
+### 15 · HeroStrip — gradient header card with tags and metric cells
+
+> Class: `com.holonplatform.vaadin.flow.vaadinplus.components.HeroStrip`  
+> Builder: `com.holonplatform.vaadin.flow.components.builders.HeroStripBuilder`  
+> Entry point: `Components.heroStrip()` or `HeroStripBuilder.create()`
+
+Use `HeroStrip` as the visual hero card on a customer / order / entity detail page —
+typically the very first component in the detail panel. It combines a thumbnail, entity
+name, tag pills (status, tier) and up to five KPI metric cells.
+
+```java
+HeroStrip strip = Components.heroStrip()
+    .variant(HeroStrip.Variant.DEFAULT)     // DEFAULT | INFO | SUCCESS | WARNING | DANGER | VIOLET
+    .header(h -> h
+        .name(customer.getName())            // entity display name
+        .meta(customer.getCustomerNumber())  // secondary label below name
+        .starred(false))                     // optional star toggle
+    .tag(customer.getTier().getLabel(),  HeroStrip.TagVariant.CONTRAST)
+    .tag(customer.getCustomerStatus().getLabel(), HeroStrip.TagVariant.INFO)
+    .cell(c -> c
+        .header("Account health")
+        .content(customer.getAccountHealth() != null ? customer.getAccountHealth() : "—"))
+    .cell(c -> c
+        .header("Open AR")
+        .content(customer.getOpenAr() != null ? customer.getOpenAr().toPlainString() : "—")
+        .valueVariant(HeroStrip.ValueVariant.DANGER))    // DEFAULT | DANGER | SUCCESS | WARNING
+    .cell(c -> c.header("ARR").content("$120k"))
+    .build();
+```
+
+`TagVariant` options: `DEFAULT` · `INFO` · `SUCCESS` · `WARNING` · `DANGER` · `CONTRAST`  
+`ValueVariant` options: `DEFAULT` · `DANGER` · `SUCCESS` · `WARNING`
+
+---
+
+### 16 · ArAgingBar — proportional multi-segment bar card
+
+> Class: `com.holonplatform.vaadin.flow.vaadinplus.components.ArAgingBar`  
+> Builder: `com.holonplatform.vaadin.flow.components.builders.ArAgingBarBuilder`  
+> Entry point: `ArAgingBarBuilder.create()` or `ArAgingBarBuilder.create(ArAgingBar.Variant)`
+
+Use `ArAgingBar` to visualise AR aging buckets (0-30d / 31-60d / 61-90d / 90d+) or any
+proportional multi-segment breakdown (pipeline stages, quote status, etc.).
+
+```java
+ArAgingBar bar = ArAgingBarBuilder.create()
+    .header(h -> h
+        .title("AR Aging")
+        .variant(ArAgingBar.Variant.WARNING))
+    .content(c -> c
+        .segment("0–30d",  "$12,400", 55.0, ArAgingBar.Variant.SUCCESS)
+        .segment("31–60d", "$6,200",  28.0, ArAgingBar.Variant.WARNING)
+        .segment("61–90d", "$2,800",  13.0, ArAgingBar.Variant.DANGER)
+        .segment("90d+",   "$880",     4.0, ArAgingBar.Variant.DANGER))
+    .footer(f -> f
+        .left("Total: $22,280")
+        .center("Avg days: 38")
+        .right("3 invoices overdue"))
+    .build();
+```
+
+`Variant` options: `DEFAULT` · `SUCCESS` · `WARNING` · `DANGER` · `INFO`

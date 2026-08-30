@@ -14,6 +14,19 @@ description: >
 
 # Test Case Document
 
+## Prerequisites
+
+Before starting, verify that the use case specification files named in `$ARGUMENTS` exist in `docs/use_cases/`.
+
+| Required artifact | Created by |
+|---|---|
+| `docs/use_cases/UC-XXX-*.md` (one per named use case) | `/use-case-spec` |
+
+If any named use case has no specification file, **stop** and tell the user:
+> "`docs/use_cases/UC-XXX-*.md` not found. Run `/use-case-spec UC-XXX` first, then re-run `/test-case`."
+
+Do not attempt to infer or recreate the missing use case specification.
+
 Create a test case document in `docs/test_cases/` for the use cases named in $ARGUMENTS. A test case describes **one end-to-end user journey** that chains several use cases across views, carrying state from step to step (data created in step 1 is used in step 3). It is the authority that end-to-end test skills automate — `/playwright-test TC-001` reads this document and turns each Flow row into a test step, so precision here directly becomes test code.
 
 ## Inputs

@@ -1,0 +1,92 @@
+name: Quality Gates
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  quality:
+    name: Plugin Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Check 1 ─────────────────────────────────────────────────────────────
+      # PropertyBox must be banned in holon-stack.md (positive assertion).
+      # Separately, no SKILL.md file outside the ban-list context should emit
+      # a bare `PropertyBox` class usage in a code block without a prohibition
+      # comment — enforced by checking the ban entry exists.
+      - name: "Check 1: PropertyBox ban entry exists in holon-stack.md"
+        run: |
+          if ! grep -q 'PropertyBox' aiup-vaadin-holon/rules/holon-stack.md; then
+            echo "ERROR: PropertyBox ban entry is missing from holon-stack.md"
+            exit 1
+          fi
+          echo "OK: PropertyBox ban is present in holon-stack.md"
+
+      # ── Check 2 ─────────────────────────────────────────────────────────────
+      # Every top-level construction SKILL.md must have a Constraints section.
+      # Reference documents (in references/ sub-directories) are excluded.
+      - name: "Check 2: Every construction SKILL.md has a Constraints section"
+        run: |
+          failed=0
+          while IFS= read -r -d '' skill; do
+            if ! grep -qi 'Constraints' "$skill"; then
+              echo "ERROR: $skill is missing a Constraints section"
+              failed=1
+            fi
+          done < <(find aiup-vaadin-holon/skills -maxdepth 2 -name 'SKILL.md' -print0)
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+          echo "OK: all construction SKILL.md files have a Constraints section"
+
+      # ── Check 3 ─────────────────────────────────────────────────────────────
+      # All JSON manifests must be valid JSON.
+      - name: "Check 3: JSON manifests are valid"
+        run: |
+          failed=0
+          for f in \
+            .claude-plugin/marketplace.json \
+            aiup-core/.claude-plugin/plugin.json \
+            aiup-vaadin-holon/.claude-plugin/plugin.json; do
+            if [ -f "$f" ]; then
+              if ! python3 -c "import json, sys; json.load(open('$f'))" 2>&1; then
+                echo "ERROR: $f is not valid JSON"
+                failed=1
+              else
+                echo "OK: $f"
+              fi
+            else
+              echo "WARN: $f not found — skipping"
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+
+      # ── Check 4 ─────────────────────────────────────────────────────────────
+      # bean-model.md must demonstrate BeanPropertySet usage.
+      - name: "Check 4: BeanPropertySet is documented in bean-model.md"
+        run: |
+          if ! grep -q 'BeanPropertySet' \
+            aiup-vaadin-holon/skills/implement/references/bean-model.md; then
+            echo "ERROR: BeanPropertySet is missing from bean-model.md"
+            exit 1
+          fi
+          echo "OK: BeanPropertySet found in bean-model.md"
+
+      # ── Check 5 ─────────────────────────────────────────────────────────────
+      # security-patterns.md must document AuthContext.
+      - name: "Check 5: AuthContext is documented in security-patterns.md"
+        run: |
+          if ! grep -q 'AuthContext' \
+            aiup-vaadin-holon/skills/implement/references/security-patterns.md; then
+            echo "ERROR: AuthContext is missing from security-patterns.md"
+            exit 1
+          fi
+          echo "OK: AuthContext found in security-patterns.md"

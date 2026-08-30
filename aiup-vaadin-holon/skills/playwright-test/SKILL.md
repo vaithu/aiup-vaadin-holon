@@ -14,6 +14,23 @@ description: >
 
 # Playwright E2E Tests
 
+## Prerequisites
+
+Before writing any tests, verify that the following artifacts exist:
+
+| Required artifact | Created by |
+|---|---|
+| `docs/use_cases/UC-XXX-*.md` (the use case being tested) | `/use-case-spec` |
+| `docs/test_cases/TC-XXX-*.md` (the test case journey document, if testing a TC) | `/test-case` |
+| Vaadin view class for the use case (e.g. `src/main/java/**/*View.java`) | `/implement` |
+
+If any artifact is missing, **stop** and tell the user which skill to run first:
+> "`docs/use_cases/UC-XXX-*.md` not found — run `/use-case-spec UC-XXX` first."  
+> "`docs/test_cases/TC-XXX-*.md` not found — run `/test-case UC-XXX …` first." (if testing a TC journey)  
+> "No Vaadin view implementation found — run `/implement UC-XXX` first, then re-run `/playwright-test`."
+
+Do not attempt to generate Playwright tests against unimplemented views.
+
 Create Playwright end-to-end tests for the use case `$ARGUMENTS`.
 Tests run against a live application at `http://localhost:8080`.
 
@@ -23,6 +40,22 @@ Cover:
    redirected or sees a restricted view.
 3. **Visual regression** — `assertThat(page).hasScreenshot(...)` snapshots for
    each stable, fully-loaded view state to catch unintended UI regressions.
+
+## Quality Gate Guardrail
+
+When testing starts, this skill also enforces the SonarQube-equivalent **quality
+gate** defined in [`../../rules/quality-gate.md`](../../rules/quality-gate.md).
+Before emitting the test summary:
+
+1. Verify the target project's `pom.xml` has the `quality` profile and the `config/`
+   rulesets. If missing, scaffold them from the reference implementation in
+   [`demo/crm-minimal`](../../../demo/crm-minimal).
+2. Run the tests **and** the gate together: `mvn -Pquality verify`.
+3. Report bug/smell/duplication counts, coverage %, and CVE findings alongside the
+   test results (reports under `target/`).
+
+The gate ships in **report mode** (non-failing) — see the guardrail doc for the
+toggles that turn it into a hard gate once the baseline is triaged.
 
 ## Constraints
 

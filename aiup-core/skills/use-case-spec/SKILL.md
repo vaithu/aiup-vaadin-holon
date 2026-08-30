@@ -15,6 +15,21 @@ description: >
 
 # Use Case Specification
 
+## Prerequisites
+
+Before starting, verify that both of these artifacts exist in the project:
+
+| Required artifact | Created by |
+|---|---|
+| `docs/requirements.md` | `/requirements` |
+| `docs/use_cases.puml` | `/use-case-diagram` |
+
+If either file is missing, **stop** and tell the user which skill to run first:
+> "`docs/requirements.md` not found — run `/requirements` first." (if requirements is missing)  
+> "`docs/use_cases.puml` not found — run `/use-case-diagram` first." (if the diagram is missing)
+
+Do not attempt to infer or recreate the missing document.
+
 ## Instructions
 
 Create or update use case specification documents for $ARGUMENTS in `docs/use_cases/`. Each use case describes a complete interaction between an actor and the system to achieve a goal.

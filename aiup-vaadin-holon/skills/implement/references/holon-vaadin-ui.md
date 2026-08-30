@@ -29,7 +29,7 @@ exist for what you need, stop and ask the developer before writing anything.
 | Labels | `Components.span()`, `Components.h1()`–`h6()`, `Components.label()` |
 | Tabs / Accordion | `Components.tabSheet()`, `Components.accordion()` |
 | Side navigation | `Components.sideNav()` |
-| Card / Panel | `Components.card()`, `Components.panel()` |
+| Card / Panel | `Components.panel()` |
 | Breadcrumb | `Components.breadcrumb()` |
 | Sheet (slide-over) | `Components.sheet()` |
 | Stepper / Timeline | `Components.stepper()`, `Components.timelineStepper()` |
@@ -102,13 +102,16 @@ public class MainLayout extends AppShellLayout implements RouterLayout {
 ```java
 package com.example.ap.bill;
 
-import com.holonplatform.auth.annotations.Permitted;
+import com.holonplatform.auth.annotations.Authenticate;
+import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
+import jakarta.annotation.security.RolesAllowed;
+
+@Authenticate
+@RolesAllowed("bills:view")
 @Route(value = "bills", layout = MainLayout.class)
-@Permitted("bills:view")
-public class BillListView extends VerticalLayout {
+public class BillListView extends Layout {
 
     public BillListView(BillService svc) {
         setSizeFull();
@@ -118,7 +121,7 @@ public class BillListView extends VerticalLayout {
 }
 ```
 
-For access control use `@Permitted` (Holon Auth). If per-action checks are needed use
+For access control use `@Authenticate` + `@RolesAllowed` (Holon Auth). If per-action checks are needed use
 `BeforeEnterObserver`:
 
 ```java
@@ -158,7 +161,7 @@ Use `@QueryParameter` on a view field to bind URL query parameters:
 
 ```java
 @Route("bills")
-public class BillListView extends VerticalLayout {
+public class BillListView extends Layout {
 
     @QueryParameter("status")
     private String filterStatus;   // bound from ?status=PENDING_REVIEW
@@ -181,13 +184,19 @@ state. Build it via `Components.listing(...)`.
 
 ### Bean-based listing
 
+> **Rule:** Every `ListingBundle` **must** call `.emptyState()` (or `.emptyState(customEmpty)`)
+> so that a meaningful UI is shown when the application is opened for the first time and there
+> is no data yet. Omitting the call leaves the grid blank with no feedback to the user.
+
 ```java
 import com.holonplatform.vaadin.flow.components.Components;
 import com.holonplatform.vaadin.flow.components.ListingBundle;
 
 // Components.listing(Class<T>) → ListingBundleBuilder<T> → ListingBundle<T>
+// Use q.getOffset() + q.getLength() for lazy/virtual-scroll loading via BeanDatastoreHelper.findSlice
 ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
-    .fetch(q -> svc.findAll().toList())          // FetchCallback — called on each refresh
+    .fetch(q -> svc.findSlice(q.getOffset(), q.getLength()))  // lazy — never call .toList() here
+    .emptyState()                                              // MANDATORY: shown on first open when no data
     .build();
 
 add(bundle);
@@ -197,15 +206,19 @@ add(bundle);
 
 ```java
 ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
-    .fetch((filter, sortOrders) -> {
-        // filter is Optional<QueryFilter>, sortOrders is List<QuerySort>
-        return svc.findAll(filter.orElse(null)).toList();
+    .fetch(q -> {
+        // q.getOffset() and q.getLength() carry the virtual-scroll window;
+        // pass them to BeanDatastoreHelper.findSlice for lazy server-side loading.
+        // q.getQueryFilter() is Optional<QueryFilter>; q.getQuerySort() is List<QuerySort>.
+        return svc.findSlice(q.getOffset(), q.getLength(), q.getQueryFilter().orElse(null));
     })
     .search("Search bills...")       // enables search box; filter is passed to fetch callback
     .withFilterPanel()               // enables advanced filter panel
     .paginated()                     // paginated mode (default: virtual scroll)
     .defaultPageSize(20)
     .pageSizes(10, 20, 50)
+    .emptyState()                    // MANDATORY: shown on first open when no data
+    .noResultsState()                // shown when search/filter returns no matches
     .build();
 ```
 
@@ -213,7 +226,7 @@ ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
 
 ```java
 ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
-    .fetch(q -> svc.findAll().toList())
+    .fetch(q -> svc.findAll())
     .columns("vendorName", "invoiceDate", "totalAmount", "status")  // visible + order
     .hidden("id")                              // hide specific columns
     .gridHeader("Bills", actionButton)         // toolbar title + context components
@@ -229,18 +242,67 @@ ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
     .build();
 ```
 
-### Mobile-responsive column
+### Custom empty state with `EmptyBuilder`
+
+Use `Empty.builder()` to build a branded empty state with an icon, title, description, and an
+optional call-to-action button. Pass the result to `.emptyState(Empty)`:
 
 ```java
+import com.holonplatform.vaadin.flow.vaadinplus.components.Empty;
+import com.vaadin.flow.component.icon.VaadinIcon;
+
+Empty myEmptyState = Empty.builder()
+    .icon(VaadinIcon.INBOX.create())
+    .title("No bills yet")
+    .description("Once bills are created they will appear here.")
+    .build();
+
+// With an action button (e.g. navigate to the create form)
+Empty myEmptyStateWithAction = Empty.builder()
+    .icon(VaadinIcon.PLUS_CIRCLE.create())
+    .title("No bills yet")
+    .description("Create your first bill to get started.")
+    .action(Components.button().text("Create bill").onClick(e -> navigator.navigateTo(NewBillView.class)).build())
+    .build();
+
 ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
-    .fetch(q -> svc.findAll().toList())
-    .mobileViewColumn(LitRenderer.<Bill>of(
-        "<div>${item.vendor}</div><div>${item.amount}</div>")
-        .withProperty("vendor", Bill::getVendorName)
-        .withProperty("amount", b -> b.getTotalAmount().toString()))
+    .fetch(q -> svc.findAll())
+    .emptyState(myEmptyState)          // custom empty state — shown on first open with no data
+    .noResultsState()                  // default no-results state for search/filter
+    .build();
+```
+
+### Mobile-responsive column
+
+Prefer Holon's **`LitRendererBuilder`** (`com.holonplatform.vaadin.flow.components.builders`)
+over a hand-written `LitRenderer` template string: it is type-safe, auto-binds properties, and
+its semantic sub-builders (`gridCell()`, `documentRow()`, `mobileListItem()`, `mobileGridColumn()`)
+own the CSS class contract internally, so no raw CSS class strings leak into view code. Style rows
+through the `CellStyle` API (`CellStyle.text().title()`, `CellStyle.text().amount()`,
+`CellStyle.span().caption()`, `CellStyle.pill().success()`, …).
+
+`gridCell()` requires its bundled stylesheet — add `@StyleSheet("context://grid-cell.css")`
+(from `com.vaadin.flow.component.dependency.StyleSheet`) on the consuming view; the CSS ships
+inside the Holon Vaadin core jar.
+
+```java
+@StyleSheet("context://grid-cell.css") // on the view class
+// ...
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findAll())
+    .mobileViewColumn(LitRendererBuilder.<Bill>gridCell()
+        .mediaAvatar(b -> b.getVendorName() != null ? b.getVendorName() : "")
+        .addRow(row -> row
+            .startText(Bill::getVendorName, CellStyle.text().title())
+            .endText(b -> b.getTotalAmount().toString(), CellStyle.text().amount()))
+        .build())
     .mobileViewHeader("Bills")
     .build();
 ```
+
+> **No Holon `LitRendererBuilder`?** If the Holon version on the classpath predates it, fall back to
+> a plain `com.vaadin.flow.data.renderer.LitRenderer.<Bill>of("…").withProperty(…)` — `mobileViewColumn`
+> accepts any Vaadin `LitRenderer`.
 
 ### Access the underlying grid
 
@@ -260,10 +322,10 @@ ListingBundle<PropertyBox> bundle = Components.listing(BillModel.LISTING)
     .search("Search...")
     .withFilterPanel()
     .gridHeader("Bills")
-    .fetch(q -> {  // returns List<PropertyBox>
+    .fetch(q -> {  // returns Stream<PropertyBox> — lazy; never use .list() (eager) here
         return datastoreHelper.getDatastore()
             .query(BillModel.TARGET)
-            .list(BillModel.LISTING);
+            .stream(BillModel.LISTING);
     })
     .build();
 ```
@@ -383,9 +445,53 @@ detail panel automatically.
 
 **Mobile:** listing fills the screen; row click opens detail in a Sheet (slide-over).
 
+### Lookup-entity combobox inside `EntityFormPanel`
+
+When a form field is a combobox whose options come from a lookup entity (e.g. `Industry`,
+`Country`, `Department`), bind the field via `.bind(...)` so items are loaded from a service call.
+**Never hard-code a `String` list** — that list belongs in the database.
+
+Use `.allowCustomValues(true)` on **every** lookup combobox so the user can type a new value that
+does not yet exist in the table. The `onCustomValueSet` listener must call a service method that
+inserts the new label into the lookup table (if absent) and returns the generated `id`, then
+refresh the input items and set the new value.
+
+```java
+// Customer form where industry and country are creatable lookup comboboxes
+Input<Long> industryInput = Components.input.singleSelect(Long.class)
+    .label(Localizable.of("Industry", "customer.industry"))
+    .items(industryService.findAll(), IndustryLookup::getId, IndustryLookup::getName)
+    .allowCustomValues(true)
+    .onCustomValueSet(newLabel -> {
+        Long newId = industryService.findOrCreate(newLabel);
+        industryInput.refresh(industryService.findAll(),
+                IndustryLookup::getId, IndustryLookup::getName);
+        industryInput.setValue(newId);
+    })
+    .build();
+
+EntityFormPanel.bean(Customer.class)
+    .bind("industryId", industryInput)
+    .autoRequiredIndicators(true)   // validation from @NotNull on Customer.industryId
+    .saveButton(
+        btn -> btn.text(Localizable.of("Save", "action.save")),
+        customer -> customerService.save(customer))
+    .cancelButton(btn -> btn.text(Localizable.of("Cancel", "action.cancel")),
+        () -> Navigator.get().navigateBack())
+    .build();
+```
+
+For multi-select lookup fields use `Components.input.multiSelect(Long.class)` in the same pattern.
+
+> **Rule:** There are no code-owned enums for domain values — every categorical value that appears
+> in a combobox, select, or radio group **must** come from a database table via a lookup entity and
+> service call. Every such field **must** use `.allowCustomValues(true)` so the user can freely
+> enter new values; the listener persists the new entry to the lookup table before selecting it.
+> Never use `Input.enumSelect` or `Input.enumOptionSelect` for domain values.
+
 ---
 
-## Input components (`Components.input`)
+> ⚠️ **FORM RULE**: Do **not** use `Components.input.*` to assemble form fields manually inside a create / edit / detail screen. Use `EntityPanelForm` — it renders all bean fields automatically from `@Caption` and validates from bean annotations. `Components.input.*` is for **standalone** inputs: search bars, filter toolbars, login fields, OTP fields, and similar single-purpose controls outside a form context.
 
 All inputs are accessed through `Components.input.*`. Every builder returns a
 `ValidatableInput<T>` or one of its subtypes.
@@ -409,14 +515,6 @@ Input<LocalTime>     lt  = Components.input.localTime().label("Time").build();
 
 // Boolean
 Input<Boolean> active = Components.input.boolean_().label("Active").build();
-
-// Enum single-select (combobox)
-Input<Status> status = Components.input.enumSelect(Status.class)
-    .label("Status").build();
-
-// Enum radio buttons
-Input<Status> status = Components.input.enumOptionSelect(Status.class)
-    .label("Status").build();
 
 // String single-select with items
 Input<String> country = Components.input.singleSelect(String.class)
@@ -462,6 +560,18 @@ group.setValue(existingBox);
 
 ## Layout builders
 
+> ⚠️ **FORM RULE**: Do **not** build a form by placing `Input` fields inside a `FormLayout`. Use `EntityPanelForm` for all create / edit / detail screens. `Components.formLayout()` is only for non-form layouts (e.g. side-by-side filter panels or multi-column display regions).
+
+> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For
+> **simpler** responsive behaviour (mobile/desktop slot swaps, column counts, hiding/showing
+> regions) prefer the component responsive APIs below (`ResponsiveDiv`,
+> `FormLayout.responsiveSteps(...)`, `UIUtils` step maps, `MasterDetailLayout`,
+> `mobileViewColumn`). For **complex** responsive behaviour (fine-grained breakpoints, spacing,
+> sticky bars, presentation changes CSS expresses more cleanly) use plain CSS `@media` queries
+> and styles in `src/main/resources/META-INF/resources/styles.css`, targeting a CSS class you
+> add to the component.
+> See `implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
+
 Prefer Holon layout builders over raw Vaadin layout constructors.
 
 ```java
@@ -486,7 +596,7 @@ FormLayout form = Components.formLayout()
     .add(nameInput, emailInput)
     .build();
 
-// Holon Layout (vaadinplus — more flexible than VerticalLayout)
+// Holon Layout (vaadinplus — preferred view base class, more flexible than VerticalLayout)
 Layout layout = Components.layout(comp1, comp2);
 
 // Row/Column grid
@@ -590,9 +700,9 @@ var nav = Components.sideNav()
 ## Cards and Panels
 
 ```java
-// Card — lightweight content container
-var card = Components.card()
-    .header("Customer Summary")
+// Panel — titled bordered container
+var panel = Components.panel()
+    .title("Customer Summary")
     .content(summaryContent)
     .build();
 
@@ -767,8 +877,8 @@ var kanban = KanbanBoard.<Bill, String>builder()
         KanbanColumn.of("REJECTED", "Rejected")
     ))
     .cardRenderer(bill -> {
-        var card = Components.card().content(Components.span().text(bill.getVendorName()).build()).build();
-        return card;
+        var panel = Components.panel().title(bill.getVendorName()).build();
+        return panel;
     })
     .itemIdentifierProvider(bill -> String.valueOf(bill.getId()))
     .itemColumnProvider(Bill::getStatus)
@@ -777,7 +887,7 @@ var kanban = KanbanBoard.<Bill, String>builder()
     .countProvider((col, filter) -> (long) svc.findAll(col.getId()).count())
     .build();
 
-kanban.setItems(svc.findAll().toList());
+kanban.setItems(svc.findAll());
 add(kanban.getComponent());
 ```
 
@@ -787,9 +897,10 @@ add(kanban.getComponent());
 
 ```java
 // Declarative — on every @Route that requires a permission
+@Authenticate
+@RolesAllowed("bills:view")
 @Route(value = "bills", layout = MainLayout.class)
-@Permitted("bills:view")
-public class BillListView extends VerticalLayout { ... }
+public class BillListView extends Layout { ... }
 
 // Programmatic — for fine-grained per-action control
 AuthContext auth = AuthContext.require();
@@ -1055,7 +1166,7 @@ define them via `Localizable` to keep them translated:
 
 ```java
 Components.<Bill>listing(Bill.class)
-    .fetch(q -> svc.findAll().toList())
+    .fetch(q -> svc.findAll())
     .columnHeader("vendorName",
         Localizable.of("bill.column.vendorName", "Vendor"))
     .columnHeader("invoiceDate",
@@ -1083,3 +1194,337 @@ ask the developer** rather than reaching for raw Vaadin/HTML element APIs.
 
 > **Rule:** If no Holon A11Y configurator covers the requirement, treat it the same as any
 > missing Holon component — do not fall back silently; surface it to the developer.
+
+---
+
+## Timezone-aware display
+
+In a SaaS application the server (and database) always operate in **UTC**, but users are
+distributed globally. Without explicit timezone handling, every displayed timestamp appears
+in UTC (e.g. US server time), which is wrong for a user in India (IST = UTC+5:30).
+
+The correct pattern is: **store as `Instant` (UTC) → capture user `ZoneId` at session
+start → convert `Instant → ZonedDateTime` for display → convert `LocalDateTime + ZoneId →
+Instant` on save.**
+
+### 1. Capture the browser timezone at session start
+
+Call this once in `onAttach()` of your `MainLayout` (or the top-level `AppLayout`):
+
+```java
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.server.VaadinSession;
+import java.time.ZoneId;
+
+@Override
+protected void onAttach(AttachEvent event) {
+    super.onAttach(event);
+    UI.getCurrent().getPage().retrieveExtendedClientDetails(details -> {
+        String tzId = details.getTimeZoneId(); // e.g. "Asia/Kolkata"
+        try {
+            VaadinSession.getCurrent().setAttribute("userTimezone", ZoneId.of(tzId));
+        } catch (Exception ignored) {
+            VaadinSession.getCurrent().setAttribute("userTimezone", ZoneId.of("UTC"));
+        }
+    });
+}
+```
+
+> `retrieveExtendedClientDetails` is an asynchronous browser round-trip. Attribute is
+> available on the **next** server interaction — it is safe for all normal view navigation
+> that happens after the layout renders.
+
+### 2. Helper: resolve the session timezone
+
+```java
+import java.time.ZoneId;
+import com.vaadin.flow.server.VaadinSession;
+
+public static ZoneId sessionZone() {
+    ZoneId z = (ZoneId) VaadinSession.getCurrent().getAttribute("userTimezone");
+    return z != null ? z : ZoneId.of("UTC");
+}
+```
+
+### 3. Display an `Instant` in the user's timezone
+
+```java
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.Instant;
+
+Instant invoiceDate = invoice.getInvoiceDate();  // UTC from DB
+ZonedDateTime local = invoiceDate.atZone(sessionZone());
+
+String display = local.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm z"));
+// India user sees:  "18-Aug-2026 15:30 IST"
+// US (UTC) user:    "18-Aug-2026 10:00 UTC"
+```
+
+Bind this into a read-only label inside a `ListingBundle` column renderer or an
+`EntityFormPanel` field decorator — do **not** store formatted strings in the bean.
+
+### 4. Save a user-entered date back as UTC `Instant`
+
+When `EntityFormPanel` / `Components.input.localDateTime()` returns a `LocalDateTime`
+(no timezone embedded), re-attach the session zone before persisting:
+
+```java
+LocalDateTime picked = dateTimePicker.getValue(); // "18-Aug-2026 15:30" (no zone info)
+Instant utc = picked.atZone(sessionZone()).toInstant();  // → 2026-08-18T10:00:00Z
+invoice.setInvoiceDate(utc);
+datastoreService.save(invoice);
+```
+
+### 5. Database column type
+
+Flyway migrations must use `TIMESTAMPTZ` (Postgres) for every `Instant`-mapped column:
+
+```sql
+invoice_date  TIMESTAMPTZ NOT NULL,
+created_date  TIMESTAMPTZ NOT NULL DEFAULT now(),
+last_modified_date TIMESTAMPTZ,
+```
+
+### 6. JVM startup flag
+
+Always pass `-Duser.timezone=UTC` to the JVM (or set `TZ=UTC` in the container
+environment) so the database driver does not silently shift timestamps using the server's
+local timezone.
+
+### 7. Locale-aware formatting with Holon `LocalizationContext`
+
+Use the Holon `LocalizationContext` to resolve the user's locale, then combine it with
+their `ZoneId` in a single `DateTimeFormatter` — this gives locale-correct formatting
+(e.g. Indian English formats dates differently from US English) **and** the correct
+timezone offset in one step:
+
+```java
+import com.holonplatform.core.i18n.LocalizationContext;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.Locale;
+
+Locale userLocale = LocalizationContext.require().getLocale(); // resolved by Holon I18N
+DateTimeFormatter fmt = DateTimeFormatter
+    .ofLocalizedDateTime(FormatStyle.MEDIUM)  // e.g. "18-Aug-2026, 3:30:00 PM"
+    .withLocale(userLocale)                   // locale-correct label order & separators
+    .withZone(sessionZone());                 // offsets to user's timezone
+
+String display = fmt.format(invoice.getInvoiceDate()); // Instant → formatted string
+```
+
+> Do **not** hard-code a pattern string like `"dd-MMM-yyyy HH:mm z"` — use
+> `DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)` so the format adapts to
+> the user's locale automatically.
+
+### 8. Timezone-aware Datastore range queries
+
+When filtering by a user-supplied date (e.g. "show invoices for today"), convert the
+user's local date bounds to `Instant` **before** passing them to the Datastore filter —
+otherwise "today" is evaluated in UTC and misses the correct wall-clock window for users
+in other timezones:
+
+```java
+import java.time.LocalDate;
+import java.time.Instant;
+
+LocalDate userDate = LocalDate.of(2026, 8, 18);  // user picked this date in the UI
+
+Instant from = userDate.atStartOfDay(sessionZone()).toInstant();      // 00:00 IST → UTC
+Instant to   = userDate.plusDays(1).atStartOfDay(sessionZone()).toInstant(); // 00:00 next day IST → UTC
+
+// Holon Datastore filter using TemporalProperty<Instant>:
+List<Invoice> results = helper.find(
+    BillModel.INVOICE_DATE.goe(from).and(BillModel.INVOICE_DATE.lt(to))
+);
+```
+
+> `TemporalProperty<Instant>` supports `.goe()`, `.loe()`, `.gt()`, `.lt()` — the same
+> expression API as any other `PathProperty`. No `TemporalType` hint needed for `Instant`.
+
+### Summary
+
+| Layer | Rule |
+|---|---|
+| DB column | `TIMESTAMPTZ` (always UTC) |
+| Bean field | `java.time.Instant` |
+| JVM | `-Duser.timezone=UTC` |
+| Session start | Capture `ZoneId` via `ExtendedClientDetails` in `MainLayout.onAttach` |
+| Display | `instant.atZone(sessionZone())` → `DateTimeFormatter.ofLocalizedDateTime(MEDIUM).withLocale(LocalizationContext.require().getLocale()).withZone(sessionZone())` |
+| Form input | `localDateTime.atZone(sessionZone()).toInstant()` before save |
+| Date-range filter | Convert user's `LocalDate` bounds to `Instant` via `atStartOfDay(sessionZone()).toInstant()` |
+
+---
+
+## Vaadin Signals (Reactive State)
+
+Vaadin Signals (`com.vaadin.flow.signals.*`) ship with Vaadin 25.1+ and have **no Holon
+equivalent**. They are the right choice whenever the problem is **reactive state propagation**
+rather than standard CRUD.
+
+### Decision table — signals vs. standard patterns
+
+| Situation | Right tool |
+|-----------|-----------|
+| Button click → save → refresh grid | Regular click listener + `listing.refresh()` |
+| Loading spinner during an async call | `ValueSignal<Boolean>` + `Signal.effect()` |
+| Selected-row index shared between two panels in the same view | `ValueSignal<Long>` + `Signal.effect()` |
+| Live counter of connected users visible to everyone | `SharedNumberSignal` + `Signal.effect()` |
+| Real-time value pushed to all sessions (price, flag, message) | `SharedValueSignal<T>` + `Signal.effect()` |
+| Live feed / event log visible to all connected clients | `SharedListSignal<T>` + `Signal.effect()` |
+| Derived label that auto-updates when source changes | `Signal.computed()` / `Signal.cached()` |
+| Standard CRUD listing from the database | Datastore + service + `ListingBundle` |
+| Form binding | `EntityFormPanel` + `BeanPropertySet` |
+
+> **Prefer signals over click listeners for reactive UI state.** When a click (or any
+> event) changes UI *state* — a loading flag, a component's visibility/enabled state, a
+> status message, a selected row shared between panels, or a value seen across sessions —
+> the handler should **set a signal** and let `Signal.effect(component, …)` propagate the
+> change to every dependent component. Do **not** imperatively mutate several components
+> inside the listener body. The click listener still exists (it is how the DOM event is
+> received), but it becomes a one-line signal update instead of scattered UI wiring, and
+> the reactive binding lives in the effect. A plain click listener with no reactive state
+> (e.g. navigate away, call a service then `listing.refresh()`) needs no signal.
+
+### 1. Session-local reactive state (`ValueSignal`)
+
+`ValueSignal<T>` holds UI-local state. It is **non-serializable** and cannot be used inside
+a signal transaction — use `SharedValueSignal` when that is needed.
+
+```java
+import com.vaadin.flow.signals.Signal;
+import com.vaadin.flow.signals.local.ValueSignal;
+
+// Declare as a field in the view (never as a @Bean):
+private final ValueSignal<Boolean> loading = new ValueSignal<>(false);
+private final ValueSignal<String>  statusMsg = new ValueSignal<>("");
+
+// Wire effects — auto-enabled on attach, auto-disabled on detach:
+Signal.effect(this, () -> progressBar.setVisible(loading.peek()));
+Signal.effect(this, () -> statusLabel.setText(statusMsg.peek()));
+
+// Update from event handler (session lock is already held in a Vaadin listener):
+saveButton.addClickListener(e -> {
+    loading.set(true);
+    statusMsg.set(Localizable.of("Saving…", "action.saving").fallbackMessage());
+    try {
+        service.save(currentBean);
+        statusMsg.set(Localizable.of("Saved", "action.saved").fallbackMessage());
+    } catch (Exception ex) {
+        NotificationUtil.notificationError(Localizable.of("Save failed", "error.save"));
+        log.error("Save failed", ex);
+    } finally {
+        loading.set(false);
+    }
+});
+```
+
+### 2. Cross-session counter (`SharedNumberSignal`)
+
+Declare as an application-scoped `@Bean`. Inject via **constructor** into the view.
+
+```java
+// Config class (shared):
+@Bean
+public SharedNumberSignal activeUsersSignal() {
+    return new SharedNumberSignal(0L);
+}
+
+// View:
+import com.vaadin.flow.signals.shared.SharedNumberSignal;
+import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.DetachEvent;
+
+public class DashboardView extends ... {
+
+    private final SharedNumberSignal activeUsers;
+
+    public DashboardView(SharedNumberSignal activeUsers) {
+        this.activeUsers = activeUsers;
+        Signal.effect(this, () ->
+            activeUsersLabel.setText(String.valueOf(activeUsers.peek())));
+    }
+
+    @Override
+    protected void onAttach(AttachEvent event) {
+        super.onAttach(event);
+        activeUsers.increment();
+    }
+
+    @Override
+    protected void onDetach(DetachEvent event) {
+        super.onDetach(event);
+        activeUsers.decrement();
+    }
+}
+```
+
+### 3. Cross-session real-time value (`SharedValueSignal`)
+
+```java
+import com.vaadin.flow.signals.shared.SharedValueSignal;
+
+// Config (@Bean):
+@Bean
+public SharedValueSignal<String> systemBanner() {
+    return new SharedValueSignal<>(String.class, "");
+}
+
+// Admin view — update for all sessions:
+bannerInput.addValueChangeListener(e ->
+    systemBanner.set(e.getValue()));
+
+// All views — reactive display:
+Signal.effect(this, () -> {
+    String msg = systemBanner.peek();
+    bannerBar.setVisible(!msg.isBlank());
+    bannerBar.setText(msg);
+});
+```
+
+### 4. Real-time shared list (`SharedListSignal`)
+
+Use a `SharedListSignal` for a live event feed that all connected users see update in
+real-time without polling.
+
+```java
+import com.vaadin.flow.signals.shared.SharedListSignal;
+
+@Bean
+public SharedListSignal<String> activityFeed() {
+    return new SharedListSignal<>(String.class);
+}
+
+// Producer (any view or service):
+activityFeed.insertLast("User Alice updated Invoice #42");
+
+// Consumer view (live-updates without refresh):
+Signal.effect(this, () -> {
+    List<String> entries = activityFeed.peek()
+        .stream().map(node -> node.peek()).toList();
+    feedListing.setItems(entries);
+});
+```
+
+### 5. Computed / cached derived signal
+
+```java
+// Computed — re-evaluates on every read of the derived signal:
+Signal<Integer> nameLength = () -> nameSignal.get().length();
+
+// Cached — re-evaluates only when a dependency changes (memoized):
+var uppercaseName = Signal.cached(Signal.computed(() -> nameSignal.get().toUpperCase()));
+```
+
+### Rules summary
+
+| Rule | Detail |
+|------|--------|
+| `SharedXSignal` → `@Bean` | Declare as application-scoped singleton; inject via constructor |
+| `ValueSignal` / `ListSignal` → view field | Session-local; never a `@Bean` or `static` field |
+| Effect binding | Always `Signal.effect(component, …)` — not `Signal.unboundEffect(…)` — so lifecycle ties to attach/detach and session lock is managed automatically |
+| Reading in effect | Use `.peek()` to read without creating a dependency; use `.get()` inside `Signal.computed()` or `Signal.cached()` callbacks |
+| No transactions with `ValueSignal` | `ValueSignal` cannot participate in signal transactions; use `SharedValueSignal` when optimistic-lock semantics are needed |
+| Signals ≠ database | Do not use shared signals as a substitute for persisted data; load records from the Datastore and use signals only for the reactive notification layer |
+| Prefer signals over click-listener UI logic | A handler that changes reactive UI state sets a signal; `Signal.effect()` updates the components — never mutate several components imperatively inside the listener |

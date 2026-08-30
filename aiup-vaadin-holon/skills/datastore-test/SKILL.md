@@ -11,6 +11,22 @@ description: >
 
 # Datastore Test
 
+## Prerequisites
+
+Before writing any tests, verify that the implementation for the use case exists:
+
+| Required artifact | Created by |
+|---|---|
+| `docs/use_cases/UC-XXX-*.md` (the use case being tested) | `/use-case-spec` |
+| Service class for the use case (e.g. `src/main/java/**/*Service.java`) | `/implement` |
+| `src/main/resources/db/migration/V*.sql` (Flyway migration scripts) | `/flyway-migration` |
+
+If any artifact is missing, **stop** and tell the user which skill to run first:
+> "No service implementation found — run `/implement UC-XXX` first, then re-run `/datastore-test`."  
+> "No Flyway migration scripts found — run `/flyway-migration` first." (if no SQL migrations exist)
+
+Do not attempt to generate tests against unimplemented services.
+
 ## Instructions
 
 Create JUnit 5 integration tests for the use case `$ARGUMENTS` using
@@ -19,12 +35,28 @@ Testcontainers PostgreSQL + Flyway-migrated schema + Holon Datastore from Contex
 **Never mock the Datastore.** Every test exercises the real database via the real
 Holon `Datastore` backed by a Testcontainers PostgreSQL container.
 
+## Quality Gate Guardrail
+
+When testing starts, this skill also enforces the SonarQube-equivalent **quality
+gate** defined in [`../../rules/quality-gate.md`](../../rules/quality-gate.md).
+Before emitting the test summary:
+
+1. Verify the target project's `pom.xml` has the `quality` profile and the `config/`
+   rulesets. If missing, scaffold them from the reference implementation in
+   [`demo/crm-minimal`](../../../demo/crm-minimal).
+2. Run the tests **and** the gate together: `mvn -Pquality verify`.
+3. Report bug/smell/duplication counts, coverage %, and CVE findings alongside the
+   test results (reports under `target/`).
+
+The gate ships in **report mode** (non-failing) — see the guardrail doc for the
+toggles that turn it into a hard gate once the baseline is triaged.
+
 ## Constraints
 
 **Read [`../../rules/holon-stack.md`](../../rules/holon-stack.md) before generating.**
 
 - **No mocking of Datastore** — use Testcontainers + real Flyway-migrated DB
-- **No `@Autowired`** — retrieve Datastore from `Context.get()`
+- **No `@Autowired`** — inject `Datastore` into the service via constructor; pass it directly in `@BeforeAll`
 - **No Spring Security in test layer** — auth is tested via Holon Auth APIs only
 - Java 25 / JUnit 5 / Testcontainers / Flyway 10.x / PostgreSQL 16+
 
@@ -33,7 +65,7 @@ Holon `Datastore` backed by a Testcontainers PostgreSQL container.
 - [ ] No mocked Datastore
 - [ ] Testcontainers `@Container` with `PostgreSQLContainer`
 - [ ] Flyway migrations applied before tests (`Flyway.configure().load().migrate()`)
-- [ ] Datastore retrieved via `Context.get()`, not `@Autowired`
+- [ ] `Datastore` constructed and passed directly to service constructor — no `@Autowired`, no `Context.get()`
 - [ ] Test data created in `@BeforeEach`, cleaned in `@AfterEach`
 - [ ] No `Thread.sleep()` — use proper JUnit 5 assertions
 - [ ] Tests cover: list/filter, single-record lookup, save (insert + update), delete
@@ -43,9 +75,8 @@ Holon `Datastore` backed by a Testcontainers PostgreSQL container.
 ```java
 package com.example.ap.datastore;
 
-import com.holonplatform.core.Context;
 import com.holonplatform.core.datastore.Datastore;
-import com.holonplatform.jdbc.spring.boot.JdbcDatastoreAutoConfiguration;
+import com.holonplatform.jpa.spring.boot.JpaDatastoreAutoConfiguration;
 import com.example.ap.domain.Bill;
 import com.example.ap.service.BillService;
 import org.flywaydb.core.Flyway;
@@ -84,16 +115,13 @@ class BillServiceIT {
             .load()
             .migrate();
 
-        // Configure and register JDBC Datastore in Holon Context
-        // (Use Holon JDBC Datastore builder — exact API from JavaDocs MCP or holon-datastore-jdbc docs)
-        datastore = /* JdbcDatastore.builder()
-            .dataSource(ds)
-            .build() */ null; // replace with actual Holon JDBC Datastore bootstrap
+        // Configure and register Holon Datastore in Holon Context
+        // (Use Holon Datastore builder — exact API from JavaDocs MCP or holon-datastore-jpa docs)
+        datastore = /* JpaDatastore.builder()
+            .entityManagerFactory(emf)
+            .build() */ null; // replace with actual Holon JPA Datastore bootstrap
 
-        Context.get().scope(com.holonplatform.core.ContextScope.APPLICATION)
-            .registerResource(Datastore.CONTEXT_KEY, datastore, Datastore.class);
-
-        billService = new BillService();
+        billService = new BillService(datastore);
     }
 
     private Long createdId;
@@ -154,7 +182,7 @@ class BillServiceIT {
 1. Read the use case specification from `docs/use_cases/UC-XXX-*.md`
 2. Identify the service class and `BeanPropertySet` to test
 3. Set up Testcontainers PostgreSQL container + Flyway migration in `@BeforeAll`
-4. Bootstrap Holon JDBC Datastore from the container's JDBC URL (consult JavaDocs MCP for exact API)
+4. Bootstrap Holon Datastore from the container URL (consult JavaDocs MCP for exact API)
 5. Register Datastore in Holon Context
 6. For each operation in the service (list, findById, save, delete, domain actions):
     - Write a `@Test` method
@@ -167,5 +195,5 @@ class BillServiceIT {
 
 ## Resources
 
-- If configured, use the JavaDocs MCP server for Holon JDBC Datastore builder API: `https://www.javadocs.dev/mcp`
+- If configured, use the JavaDocs MCP server for Holon Datastore builder API: `https://www.javadocs.dev/mcp`
 - See [`../../rules/mcp-servers.md`](../../rules/mcp-servers.md) to configure MCP servers

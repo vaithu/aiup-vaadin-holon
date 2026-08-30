@@ -102,15 +102,16 @@ a context resource.
 
 ```java
 import com.holonplatform.auth.annotations.Authenticate;
+import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
 import com.vaadin.flow.router.Route;
 
 @Authenticate                                   // any authenticated user may access this route
 @Route("bills")
-public class BillListView extends VerticalLayout { ... }
+public class BillListView extends Layout { ... }
 
 @Authenticate(redirectURI = "login")            // redirect to "login" when not authenticated
 @Route("bills/approve")
-public class BillApprovalView extends VerticalLayout { ... }
+public class BillApprovalView extends Layout { ... }
 ```
 
 `@Authenticate` can also be placed on a `RouterLayout` class to protect all child routes:
@@ -120,30 +121,31 @@ public class BillApprovalView extends VerticalLayout { ... }
 public class MainLayout extends Div implements RouterLayout { }
 
 @Route(value = "bills", layout = MainLayout.class)
-public class BillListView extends VerticalLayout { ... }   // inherits @Authenticate
+public class BillListView extends Layout { ... }   // inherits @Authenticate
 ```
 
 ---
 
 ## Route-level authorization guard (`@RolesAllowed`)
 
-Use `javax.annotation.security.RolesAllowed` to require that the authenticated user has
+Use `jakarta.annotation.security.RolesAllowed` to require that the authenticated user has
 **at least one** of the listed permission strings.
 
 ```java
-import javax.annotation.security.RolesAllowed;
+import jakarta.annotation.security.RolesAllowed;
 import com.holonplatform.auth.annotations.Authenticate;
+import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
 import com.vaadin.flow.router.Route;
 
 @Authenticate
 @RolesAllowed("bills:view")                     // user must have "bills:view" permission
 @Route("bills")
-public class BillListView extends VerticalLayout { ... }
+public class BillListView extends Layout { ... }
 
 @Authenticate
 @RolesAllowed({"bills:view", "bills:approve"})  // user must have "bills:view" OR "bills:approve"
 @Route("bills/approve")
-public class BillApprovalView extends VerticalLayout { ... }
+public class BillApprovalView extends Layout { ... }
 ```
 
 Unauthorized access fires a `ForbiddenNavigationException`. The Holon Vaadin Flow

@@ -22,7 +22,7 @@ A use case is the unit of work, not a view. A single use case may produce one vi
 | Data access (queries, saves, deletes) | **Holon Platform `Datastore`** (`query()`, `save()`, `delete()`, `bulkInsert()`, etc.) |
 | Authentication & authorisation | **Holon Platform Security** (`AuthContext`, `Realm`, `@Authenticate`, permission checks) |
 | Forms | **`BeanPropertyInputForm`** (via `Components.input.form(BeanPropertySet)` or `EntityFormPanel.bean(BeanClass)`) |
-| Grids / listings | **`ListingBundle`** (via `Components.listing(BeanClass)`) with `LitRenderer` for card-style rows |
+| Grids / listings | **`ListingBundle`** (via `Components.listing(BeanClass)`) with `LitRendererBuilder` card renderers for card-style rows |
 | Master-detail layout | **`MasterDetailLayout`** (via `Components.masterDetail(BeanClass)`) |
 | Filter panels | **`DynamicFilterPanel`** (via `ListingBundleBuilder.withFilterPanel()`) |
 | Mobile slide-in detail | **`Sheet`** (via `MasterDetailConfigurator.withMobileSheet()`) |
@@ -54,6 +54,13 @@ A use case is the unit of work, not a view. A single use case may produce one vi
 
 Every entity that needs a UI **must** be implemented as exactly two views. Let the spec drive the routes, but the structure below is mandatory.
 
+> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For simpler
+> responsive behaviour (mobile/desktop slot swaps like the desktop/mobile pattern and
+> `MasterDetailLayout` + `Sheet` below) prefer the component responsive APIs. For complex
+> responsive behaviour (fine-grained breakpoints, spacing, column counts, hide/show) use plain
+> CSS `@media` queries and styles in `src/main/resources/META-INF/resources/styles.css`. See
+> `implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
+
 ### View 1 — List View (`<Entity>ListView`)
 
 Responsible for **browsing** the entity collection. Adapts its presentation to the viewport:
@@ -61,7 +68,7 @@ Responsible for **browsing** the entity collection. Adapts its presentation to t
 ```
 Desktop  →  ListingBundle with DynamicFilterPanel
               │  row click  →  navigate to View 2 (detail route)
-Mobile   →  same ListingBundle but master column rendered as LitRenderer card
+Mobile   →  same ListingBundle but master column rendered as a LitRendererBuilder card
               │  row click  →  Sheet slide-in with full entity details
 ```
 
@@ -89,6 +96,8 @@ public class EntityListView extends Div {
                 .search("Search…")
                 .withFilterPanel()
                 .fetch((q, text, filter, sort) -> service.fetch(q, text, filter, sort))
+                .emptyState()      // MANDATORY: shown when app is first opened with no data
+                .noResultsState()  // shown when search/filter returns no matches
                 .build();
 
         bundle.addItemClickListener(e ->
@@ -111,7 +120,9 @@ public class EntityListView extends Div {
                                 .mobileViewColumn(mobileCardColumn())
                                 .search("Search…")
                                 .fetch((q, text, filter, sort) ->
-                                        service.fetch(q, text, filter, sort)))
+                                        service.fetch(q, text, filter, sort))
+                                .emptyState()      // MANDATORY: shown on first open with no data
+                                .noResultsState()) // shown when search/filter returns no matches
                         .selectionKey(Entity::getId))
                 .withDetailSync(entity -> populateSheet(sheet, entity))
                 .build();
@@ -120,7 +131,7 @@ public class EntityListView extends Div {
     }
 
     private LitRenderer<Entity> mobileCardColumn() {
-        return Components.<Entity>mobileGridColumnLit()
+        return LitRendererBuilder.<Entity>mobileGridColumn()
                 .withAvatarAsPrimary(Entity::getName)
                 .withSecondaryText(Entity::getName)
                 .withTertiaryText(e -> e.getSomeField().toString())
@@ -148,7 +159,7 @@ Responsible for **master-detail inspection and editing**. The master is a compac
 
 ```
 Desktop  →  MasterDetailLayout
-              master  : ListingBundle (minimal columns, LitRenderer card rows)
+              master  : ListingBundle (minimal columns, LitRendererBuilder card rows)
               detail  : EntityFormPanel or custom detail panel
               first row pre-selected on load; URL sync via ?id=
 
@@ -238,7 +249,7 @@ public class EntityDetailView extends Div {
     }
 
     private LitRenderer<Entity> masterCardColumn() {
-        return Components.<Entity>mobileGridColumnLit()
+        return LitRendererBuilder.<Entity>mobileGridColumn()
                 .withAvatarAsPrimary(Entity::getName)
                 .withSecondaryText(Entity::getName)
                 .withTertiaryText(e -> e.getSomeField().toString())
@@ -290,7 +301,7 @@ The following steps are mandatory and sequential. **Do not skip or reorder them.
 - Follow the **Standard Two-View Pattern** above for every entity that needs a UI.
 - Use **`BeanPropertySet.create(Entity.class)`** for the property model; never hand-roll a `PropertySet` when a bean exists.
 - Use **`ListingBundle`** (via `Components.listing(BeanClass)`) for all grids.
-- Apply **`LitRenderer`** card columns (`Components.mobileGridColumnLit()`) for the mobile/master listing rows.
+- Apply **`LitRendererBuilder`** card columns (`LitRendererBuilder.<Entity>mobileGridColumn()`, or `gridCell()` for slot-based rows) for the mobile/master listing rows. These sub-builders own their CSS class contract internally — add the matching bundled stylesheet on the view (e.g. `@StyleSheet("context://grid-cell.css")` for `gridCell()`).
 - Use **`DynamicFilterPanel`** (via `.withFilterPanel()` on the bundle builder) on the desktop list view.
 - Use **`MasterDetailLayout`** (via `Components.masterDetail(BeanClass)`) for the detail view.
 - On mobile, use **`Sheet`** (`Sheet.Side.RIGHT` or `Sheet.Side.BOTTOM`) for the slide-in detail; wire it via `withMobileSheet()` or `withDetailSync()`.

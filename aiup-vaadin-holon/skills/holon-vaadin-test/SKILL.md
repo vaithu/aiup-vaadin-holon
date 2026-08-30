@@ -12,6 +12,22 @@ description: >
 
 # Holon Vaadin Test (Browserless)
 
+## Prerequisites
+
+Before writing any tests, verify that the view implementation for the use case exists:
+
+| Required artifact | Created by |
+|---|---|
+| `docs/use_cases/UC-XXX-*.md` (the use case being tested) | `/use-case-spec` |
+| Vaadin view class for the use case (e.g. `src/main/java/**/*View.java`) | `/implement` |
+| `src/main/resources/db/migration/V*.sql` (Flyway migration scripts) | `/flyway-migration` |
+
+If any artifact is missing, **stop** and tell the user which skill to run first:
+> "No Vaadin view implementation found — run `/implement UC-XXX` first, then re-run `/holon-vaadin-test`."  
+> "No Flyway migration scripts found — run `/flyway-migration` first." (if no SQL migrations exist)
+
+Do not attempt to generate tests against unimplemented views.
+
 ## Instructions
 
 Create server-side Vaadin Browserless unit tests for the view(s) in use case `$ARGUMENTS`
@@ -23,13 +39,29 @@ Seed test data via Flyway test migrations in `src/test/resources/db/migration/`.
 Also test **role-gated visibility**: verify that buttons and sections requiring specific
 Holon Auth permissions appear or hide correctly for different roles.
 
+## Quality Gate Guardrail
+
+When testing starts, this skill also enforces the SonarQube-equivalent **quality
+gate** defined in [`../../rules/quality-gate.md`](../../rules/quality-gate.md).
+Before emitting the test summary:
+
+1. Verify the target project's `pom.xml` has the `quality` profile and the `config/`
+   rulesets. If missing, scaffold them from the reference implementation in
+   [`demo/crm-minimal`](../../../demo/crm-minimal).
+2. Run the tests **and** the gate together: `mvn -Pquality verify`.
+3. Report bug/smell/duplication counts, coverage %, and CVE findings alongside the
+   test results (reports under `target/`).
+
+The gate ships in **report mode** (non-failing) — see the guardrail doc for the
+toggles that turn it into a hard gate once the baseline is triaged.
+
 ## Constraints
 
 **Read [`../../rules/holon-stack.md`](../../rules/holon-stack.md) before generating.**
 
 - **No browser required** — `vaadin-testbench-unit-junit5` runs server-side
 - **No Mockito for Datastore** — use a real Testcontainers DB (or in-memory H2 if simpler)
-- **No `@Autowired`** — retrieve everything via Holon `Context.get()`
+- **No `@Autowired`** — inject dependencies via constructors; pass `Datastore` to service in test setup
 - Seed test data with Flyway migrations in `src/test/resources/db/migration/`
 - Auth context for role-gated tests: use Holon `AuthContext` API to mock the current user's role
 

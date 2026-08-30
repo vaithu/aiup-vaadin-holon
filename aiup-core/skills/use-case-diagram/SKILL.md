@@ -10,6 +10,15 @@ description: >
 
 # Use Case Diagram
 
+## Prerequisites
+
+Before starting, verify that `docs/requirements.md` exists in the project.
+
+If it is missing, **stop** and tell the user:
+> "`docs/requirements.md` not found. Run `/requirements` first, then re-run `/use-case-diagram`."
+
+Do not attempt to infer or recreate the requirements document.
+
 ## Instructions
 
 Create or update the PlantUML use case diagram at `docs/use_cases.puml` based on `docs/requirements.md`.

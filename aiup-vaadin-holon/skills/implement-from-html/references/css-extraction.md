@@ -1,37 +1,50 @@
 # CSS Extraction Reference
 
 Extract visual tokens from an HTML mockup's CSS and map them to **Lumo custom properties**
-in a Vaadin theme file. This keeps all styling in `themes/<app-name>/styles.css` and out
-of Java code.
+in a plain CSS file. This keeps all styling in `src/main/resources/META-INF/resources/styles.css`
+and out of Java code.
 
 ---
 
 ## Output file location
 
 ```
-src/main/resources/META-INF/resources/themes/<app-name>/styles.css
+src/main/resources/META-INF/resources/styles.css
 ```
 
-Place the CSS file in `META-INF/resources/` so Spring Boot / the servlet container serves it
-as a static resource under the context root. Reference it from `MainLayout` (or any view) with:
+This file is loaded as a document-level stylesheet by the `@StyleSheet` annotation on the
+`AppShellConfigurator` class — declared **after** the theme stylesheet so overrides apply on top.
+
+> **Responsive design policy — `ResponsiveDiv` for simple cases, CSS for complex cases.** For
+> **simpler** responsive behaviour (mobile/desktop viewport slot swaps, column counts,
+> hiding/showing regions) prefer the Lumo / Holon **component** responsive APIs
+> (`ResponsiveDiv` slots, `FormLayout.responsiveSteps(...)`, `MasterDetailLayout` + `Sheet`,
+> `mobileViewColumn(...)`). For **complex** responsive behaviour (fine-grained breakpoints,
+> spacing, font sizes, sticky bars, card vs. table presentation, per-breakpoint Grid renderers,
+> etc.) use **pure CSS `@media` queries and styles in `styles.css`**, targeting a CSS class you
+> add to the component.
 
 ```java
-// FALLBACK: no Holon equivalent for @StyleSheet CSS loading
-@StyleSheet("context://themes/<app-name>/styles.css")
-public class MainLayout extends AppLayout { ... }
+import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.theme.lumo.Lumo;
+import com.vaadin.flow.component.page.Inline;
+import com.vaadin.flow.component.page.StyleSheet;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@StyleSheet(Lumo.STYLESHEET)   // load the Lumo theme first
+@StyleSheet("styles.css")      // then apply your custom overrides
+@SpringBootApplication
+public class Application implements AppShellConfigurator { ... }
 ```
 
-`context://` resolves to the context root, which maps to `src/main/resources/META-INF/resources/`.
-
-> **Do not use `@Theme` + `src/main/frontend/themes/`.**  
-> That approach requires a Vite frontend build and prevents runtime theme switching.
-> The `@StyleSheet` + static-resource approach is the Vaadin 25-recommended pattern.
+> **Do not use the deprecated `@Theme("<app-name>")` annotation** — it was removed in Vaadin 25.2.
+> The `src/main/frontend/themes/<app-name>/` directory approach is no longer supported.
 
 ---
 
 ## Lumo custom property mapping
 
-Lumo is Vaadin's built-in design system. Override its tokens in `:root` inside `styles.css`.
+Lumo is Vaadin's built-in design system. Override its tokens in `html` inside `styles.css`.
 
 ### Colors
 
@@ -76,9 +89,9 @@ Lumo is Vaadin's built-in design system. Override its tokens in `:root` inside `
 ## Example `styles.css`
 
 ```css
-/* src/main/frontend/themes/ap-portal/styles.css */
+/* src/main/resources/META-INF/resources/styles.css */
 
-:root {
+html {
   /* Brand colors from mockup */
   --lumo-primary-color: #1565C0;
   --lumo-primary-contrast-color: #FFFFFF;
@@ -101,32 +114,85 @@ Lumo is Vaadin's built-in design system. Override its tokens in `:root` inside `
 
 ---
 
-## Application theme annotation
+## Application stylesheet annotation
 
-Apply `@StyleSheet` on `MainLayout` (or any shared layout/view) to load the custom CSS:
+Apply `@StyleSheet` on the `AppShellConfigurator` implementation (typically the `@SpringBootApplication` class).
+Always load the base theme **before** any custom overrides:
 
 ```java
-// FALLBACK: no Holon equivalent for @StyleSheet CSS loading
-import com.vaadin.flow.component.dependency.StyleSheet;
-import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.page.AppShellConfigurator;
+import com.vaadin.flow.theme.lumo.Lumo;
+import com.vaadin.flow.component.page.StyleSheet;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@StyleSheet("context://themes/ap-portal/styles.css")
-public class MainLayout extends AppLayout { ... }
+@StyleSheet(Lumo.STYLESHEET)   // Lumo base theme — always first
+@StyleSheet("styles.css")      // custom Lumo token overrides
+@SpringBootApplication
+public class Application implements AppShellConfigurator {
+    public static void main(String[] args) { ... }
+}
 ```
 
-> Do **not** use `@Theme("ap-portal")` — that requires a Vite frontend build and is superseded
-> by the `@StyleSheet` + static-resource pattern in Vaadin 25+.
+> Do **not** put `@StyleSheet` on `MainLayout`, `AppLayout`, or any `@Route` view.
+> Do **not** use the deprecated `@Theme("<app-name>")` annotation.
+
+---
+
+## Responsive breakpoints with `@media` (preferred)
+
+Express responsive behaviour with plain CSS media queries in `styles.css` first. Target the
+component's host element or a semantic CSS class you add via `component.addClassName("...")`
+(or `Components...styleName("...")`); keep the breakpoint logic in CSS, not in Java.
+
+```css
+/* src/main/resources/META-INF/resources/styles.css */
+
+/* Custom breakpoint tokens (optional, for reuse) */
+html {
+  --app-breakpoint-s: 40em;
+  --app-breakpoint-m: 60em;
+}
+
+/* Mobile-first defaults */
+.customer-form {
+  display: grid;
+  grid-template-columns: 1fr;          /* single column on small screens */
+  gap: var(--lumo-space-m);
+}
+
+/* Tablet and up */
+@media (min-width: 40em) {
+  .customer-form { grid-template-columns: 1fr 1fr; }
+}
+
+/* Desktop and up */
+@media (min-width: 60em) {
+  .customer-form { grid-template-columns: 1fr 1fr 1fr; }
+  .app-sidebar   { width: var(--app-sidebar-width, 240px); }
+}
+
+/* Hide a region below a breakpoint instead of building a second view */
+@media (max-width: 40em) {
+  .desktop-only { display: none; }
+}
+```
+
+Use `min-width` (mobile-first) breakpoints and, where possible, the same `em` thresholds the
+mockup uses so the generated CSS mirrors the source design.
 
 ---
 
 ## Rules
 
+- **Prefer the component responsive APIs (`ResponsiveDiv`, `responsiveSteps`,
+  `MasterDetailLayout`, `mobileViewColumn`) for simpler responsive cases**; use pure CSS
+  `@media` queries and styles for complex responsive behaviour.
 - Extract **only** the tokens that differ from Lumo defaults — do not copy the entire Lumo palette.
 - Do **not** hardcode hex values in Java code — all visual tokens belong in `styles.css`.
-- Place the CSS file in `src/main/resources/META-INF/resources/themes/<app-name>/styles.css` and
-  load it via `@StyleSheet("context://themes/<app-name>/styles.css")` on `MainLayout`.
-- Do **not** use `@Theme` + `src/main/frontend/themes/` — that approach requires a Vite bundle
-  build and is superseded by the `@StyleSheet` static-resource pattern.
+- Place the CSS file in `src/main/resources/META-INF/resources/styles.css` and load it via `@StyleSheet("styles.css")`
+  on the `AppShellConfigurator` class, **after** `@StyleSheet(Lumo.STYLESHEET)`.
+- Do **not** use the deprecated `@Theme("<app-name>")` annotation or the `themes/<app-name>/` directory structure.
 - If the mockup uses a CSS preprocessor (SCSS, Less), convert to plain CSS variables in the output.
 - If a design token in the mockup has no Lumo equivalent, add it as a custom property prefixed
   with `--app-` (e.g. `--app-sidebar-width: 240px`) and use it in component-level style overrides.
+

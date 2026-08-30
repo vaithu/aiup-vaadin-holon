@@ -98,9 +98,11 @@ public class BillService {
 ### Find all — no filter
 
 ```java
-// All records — returns Stream<T>, collect if needed
+// All records — returns Stream<T>, which is a lazy server-side cursor
+// Prefer Stream<T> in UI fetch callbacks; only call .toList() for in-memory
+// processing outside the UI (e.g. batch jobs, exports).
 Stream<Bill> all = helper.findAll();
-List<Bill> list  = helper.findAll().toList();
+// List<Bill> list = helper.findAll().toList();  // ← AVOID in UI fetch callbacks
 ```
 
 ### Find all — with filter
@@ -162,6 +164,28 @@ Stream<Bill> page1 = helper.findPage(1, 20,
 Stream<Bill> slice = helper.findSlice(40, 20,
     BillModel.STATUS.eq("PENDING_REVIEW"),
     BillModel.INVOICE_DATE.desc());
+```
+
+### Lazy-loading fetch callback (UI listing)
+
+**Always use `findSlice(offset, length, ...)` — not `findAll()` — inside a `ListingBundle` fetch
+callback.** The virtual-scroll / pagination engine drives the window via `q.getOffset()` and
+`q.getLength()`; `findAll()` loads every row on every scroll tick.
+
+```java
+// Service method (accepts offset + length from the fetch callback)
+public Stream<Bill> findSlice(int offset, int length, QueryFilter filter) {
+    if (filter != null) {
+        return helper.findSlice(offset, length, filter, BillModel.INVOICE_DATE.desc());
+    }
+    return helper.findSlice(offset, length, BillModel.INVOICE_DATE.desc());
+}
+
+// View fetch callback — passes q.getOffset() / q.getLength() to the service
+ListingBundle<Bill> bundle = Components.<Bill>listing(Bill.class)
+    .fetch(q -> svc.findSlice(q.getOffset(), q.getLength(),
+                              q.getQueryFilter().orElse(null)))
+    .build();
 ```
 
 ### Count and exists
@@ -622,24 +646,36 @@ helper.getDatastore()
 Always annotate your domain beans appropriately so the property set reflects the right
 column names, captions, validators, and converters.
 
-| Annotation | Purpose |
-|---|---|
-| `@DataPath("col_name")` | Override property→column mapping (field) or bean→table mapping (class) |
-| `@Caption("Label")` | Display caption for the property in UI; `@Caption(value="Name", messageCode="i18n.code")` for i18n |
-| `@Sequence(10)` | Declare display order in PropertySet iteration |
-| `@NotNull` | Add `Validator.notNull()` to the property |
-| `@NotEmpty` | Add `Validator.notEmpty()` |
-| `@NotBlank` | Add `Validator.notBlank()` |
-| `@Min(1)` / `@Max(100)` | Add numeric range validators |
-| `@Size(min=1, max=255)` | Add length validators |
-| `@Email` | Add email-format validator |
-| `@Validator(MyValidator.class)` | Attach a custom `Validator<T>` class (repeatable) |
-| `@Converter(MyConverter.class)` | Custom `PropertyValueConverter` (e.g. enum ↔ String) |
-| `@Converter(builtin = BUILTIN.NUMERIC_BOOLEAN)` | Builtin converters: `NUMERIC_BOOLEAN`, `LOCAL_DATE`, `LOCAL_DATETIME`, `ENUM_BY_ORDINAL`, `ENUM_BY_NAME` |
-| `@Config(key="k", value="v")` | Add arbitrary configuration attributes to the property (repeatable) |
-| `@Ignore` | Exclude the field from the BeanPropertySet entirely |
+All constraint annotations (`@NotNull`, `@NotBlank`, `@NotEmpty`, `@Size`, `@Min`, `@Max`, `@Email`, etc.)
+must come from **`jakarta.validation.constraints.*`** — never from `org.hibernate.validator.constraints.*`
+or `com.holonplatform.core.beans.*`.
+
+| Annotation | Source | Purpose |
+|---|---|---|
+| `@DataPath("col_name")` | `com.holonplatform.core.beans` | Override property→column mapping (field) or bean→table mapping (class) |
+| `@Caption(value = "Label", messageCode = "domain.field")` | `com.holonplatform.core.i18n` | Display caption for the property in UI; `value` is the fallback text, `messageCode` is the I18N key |
+| `@Sequence(10)` | `com.holonplatform.core.beans` | Declare display order in PropertySet iteration |
+| `@NotNull` | `jakarta.validation.constraints` | Add `Validator.notNull()` to the property |
+| `@NotEmpty` | `jakarta.validation.constraints` | Add `Validator.notEmpty()` |
+| `@NotBlank` | `jakarta.validation.constraints` | Add `Validator.notBlank()` |
+| `@Min(1)` / `@Max(100)` | `jakarta.validation.constraints` | Add numeric range validators |
+| `@Size(min=1, max=255)` | `jakarta.validation.constraints` | Add length validators |
+| `@Email` | `jakarta.validation.constraints` | Add email-format validator |
+| `@Validator(MyValidator.class)` | `com.holonplatform.core.beans` | Attach a custom `Validator<T>` class (repeatable) |
+| `@Converter(MyConverter.class)` | `com.holonplatform.core.beans` | Custom `PropertyValueConverter` (e.g. `String` ↔ `Integer`) |
+| `@Converter(builtin = BUILTIN.NUMERIC_BOOLEAN)` | `com.holonplatform.core.beans` | Builtin converters: `NUMERIC_BOOLEAN`, `LOCAL_DATE`, `LOCAL_DATETIME` |
+| `@Config(key="k", value="v")` | `com.holonplatform.core.beans` | Add arbitrary configuration attributes to the property (repeatable) |
+| `@Ignore` | `com.holonplatform.core.beans` | Exclude the field from the BeanPropertySet entirely |
 
 ```java
+import com.holonplatform.core.beans.DataPath;
+import com.holonplatform.core.beans.Identifier;
+import com.holonplatform.core.beans.Sequence;
+import com.holonplatform.core.i18n.Caption;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 @DataPath("bill")   // table name — matches DataTarget.named("bill") in the Model interface
 public class Bill {
 
@@ -651,16 +687,16 @@ public class Bill {
     @NotBlank
     private String vendorName;
 
-    @Caption("Invoice Date")
+    @Caption(value = "Invoice Date", messageCode = "bill.invoiceDate")
     @NotNull
     private LocalDate invoiceDate;
 
-    @Caption("Total")
+    @Caption(value = "Total", messageCode = "bill.totalAmount")
     @NotNull
     @Min(0)
     private BigDecimal totalAmount;
 
-    @Caption("Status")
+    @Caption(value = "Status", messageCode = "bill.status")
     @NotNull
     @Sequence(10)
     private String status;
@@ -691,13 +727,48 @@ PathProperty<Boolean> ACTIVE = PathProperty.create("active", Boolean.class)
 PathProperty<java.util.Date> CREATED = PathProperty.create("created_date", java.util.Date.class)
     .temporalType(TemporalType.DATE);     // must set TemporalType for Date/Calendar
 
-// Enum stored as its .name() string:
-PathProperty<MyStatus> STATUS = PathProperty.create("status", MyStatus.class)
-    .converter(PropertyValueConverter.enumByName());
+// NOTE: Java enum types must NOT be used for domain values — categorical fields (status, type,
+// tier, category, etc.) must be represented as Long FK references to lookup tables.
+// Bind each field as a creatable combobox: Input.singleSelect(Long.class).items(svc.findAll(), ...)
+//   .allowCustomValues(true).onCustomValueSet(v -> { Long id = svc.findOrCreate(v); ... })
 
-// Enum stored as ordinal integer:
-PathProperty<MyStatus> STATUS = PathProperty.create("status", MyStatus.class)
-    .converter(PropertyValueConverter.enumByOrdinal());
+// ── findOrCreate pattern for creatable lookup comboboxes ─────────────────────────────────────
+// Every lookup service must expose a findOrCreate(String label) method.
+// If the label already exists (case-insensitive) the existing id is returned.
+// If it is new the row is inserted and the generated id is returned.
+//
+// Example for IndustryLookup:
+//
+// @Service
+// public class IndustryLookupService {
+//
+//     private final Datastore datastore;
+//
+//     public IndustryLookupService(Datastore datastore) { this.datastore = datastore; }
+//
+//     public List<IndustryLookup> findAll() {
+//         return BeanDatastoreHelper.forBean(IndustryLookup.class, datastore)
+//                 .findAll(Comparator.comparing(IndustryLookup::getName));
+//     }
+//
+//     /** Returns the id of the existing row whose name matches (case-insensitive),
+//      *  or inserts a new row and returns its generated id. */
+//     public Long findOrCreate(String label) {
+//         if (label == null || label.isBlank()) throw new IllegalArgumentException("label must not be blank");
+//         String trimmed = label.strip();
+//         return BeanDatastoreHelper.forBean(IndustryLookup.class, datastore)
+//                 .findAll().stream()
+//                 .filter(r -> r.getName() != null && r.getName().equalsIgnoreCase(trimmed))
+//                 .map(IndustryLookup::getId)
+//                 .findFirst()
+//                 .orElseGet(() -> {
+//                     IndustryLookup row = new IndustryLookup();
+//                     row.setName(trimmed);
+//                     BeanDatastoreHelper.forBean(IndustryLookup.class, datastore).save(row);
+//                     return row.getId();
+//                 });
+//     }
+// }
 
 // Custom inline converter:
 PathProperty<Integer> PRIORITY = PathProperty.create("priority", Integer.class)
@@ -711,14 +782,15 @@ PathProperty<Integer> PRIORITY = PathProperty.create("priority", Integer.class)
 
 ---
 
-## Using JPA Datastore (exception case only)
+## Using Spring JPA (fallback only)
 
-Use the JPA Datastore (`holon-datastore-jpa`) **only** when the JDBC Datastore cannot
-express a required query (e.g. recursive CTEs). Add a justification comment:
+Use **Spring JPA** (Spring Data JPA + Hibernate) **only** when `BeanDatastoreHelper`/`Datastore`
+cannot express the required query (e.g. recursive CTEs, complex native queries). Add a justification comment:
 
 ```java
-// FALLBACK: JDBC Datastore lacks native recursive CTE support for this hierarchy query
+// FALLBACK: BeanDatastoreHelper has no equivalent for recursive CTE support in this hierarchy query
 ```
 
-All `BeanDatastoreHelper` patterns above apply identically to both JDBC and JPA Datastores.
+All `BeanDatastoreHelper` patterns above apply to the Holon Datastore; when falling back to Spring JPA,
+use a `@Repository`-annotated Spring Data JPA repository or a plain `EntityManager` query.
 

@@ -23,7 +23,7 @@ The Holon Spring Boot starters automatically register Holon resources as Spring 
 
 | Starter | Registers as Spring bean |
 |---------|--------------------------|
-| `holon-spring-boot-jdbc-datastore` | `Datastore` (JDBC) |
+| `holon-spring-boot-jdbc-datastore` | `Datastore` |
 | `holon-spring-boot-jpa-datastore` | `Datastore` (JPA) |
 | `holon-vaadin-flow-spring-boot` | Vaadin integration, `AuthContext` |
 
@@ -47,8 +47,8 @@ public class BillService {
         this.helper = BeanDatastoreHelper.of(BeanDatastore.of(datastore), Bill.class);
     }
 
-    public List<Bill> findAll() {
-        return helper.findAll().toList();
+    public Stream<Bill> findAll() {
+        return helper.findAll();
     }
 }
 
@@ -62,9 +62,10 @@ public BillService billService(Datastore datastore) {
 Views and other beans receive the service via constructor injection too:
 
 ```java
+@Authenticate
+@RolesAllowed("bills:view")
 @Route("bills")
-@Permitted("bills:view")
-public class BillListView extends VerticalLayout {
+public class BillListView extends Layout {
 
     public BillListView(BillService svc) {   // Spring injects the @Bean
         add(ListingBundle.builder(BillModel.PROPERTY_SET).items(svc::findAll).build());

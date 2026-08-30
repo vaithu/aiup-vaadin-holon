@@ -16,6 +16,15 @@ description: >
 
 # Entity Model
 
+## Prerequisites
+
+Before starting, verify that `docs/requirements.md` exists in the project.
+
+If it is missing, **stop** and tell the user:
+> "`docs/requirements.md` not found. Run `/requirements` first, then re-run `/entity-model`."
+
+Do not attempt to infer or recreate the requirements document.
+
 ## Instructions
 
 Create or update the entity model at `docs/entity_model.md` based on `docs/requirements.md`.
@@ -80,7 +89,9 @@ Defines categories of rooms with shared characteristics.
 ## Data Types (use only these)
 
 The Data Type column must use exactly these values — never SQL or ORM types such as
-VARCHAR, TEXT, CHAR, bigint, numeric, serial, smallint, UUID, Timestamp, or Enum:
+VARCHAR, TEXT, CHAR, bigint, numeric, serial, smallint, UUID, Timestamp, or Enum.
+Categorical values (status, type, tier, category, etc.) must be modelled as a separate
+lookup entity with a `Long` foreign key — **never** as an Enum column:
 
 | Data Type | Length/Precision | Usage                 |
 |-----------|------------------|-----------------------|

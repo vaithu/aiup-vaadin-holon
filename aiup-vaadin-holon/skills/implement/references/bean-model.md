@@ -64,13 +64,13 @@ calls needed in view code.
 ```java
 import com.holonplatform.core.i18n.Caption;
 
-@Caption(message = "Invoice Number", messageCode = "bill.invoiceNumber")
+@Caption(value = "Invoice Number", messageCode = "bill.invoiceNumber")
 private String invoiceNumber;
 
-@Caption(message = "Total Amount (USD)", messageCode = "bill.totalAmount")
+@Caption(value = "Total Amount (USD)", messageCode = "bill.totalAmount")
 private BigDecimal totalAmount;
 
-@Caption(message = "Status", messageCode = "bill.status")
+@Caption(value = "Status", messageCode = "bill.status")
 private String status;
 ```
 
@@ -90,14 +90,14 @@ private String status;
 
 ### `@NotNull` — required-field marker
 
-Mark mandatory fields with `@NotNull` from `com.holonplatform.core.beans.NotNull`.
+Mark mandatory fields with `@NotNull` from `jakarta.validation.constraints`.
 `EntityPanelForm` reads this annotation and sets `aria-required="true"` automatically.
 
 ```java
-import com.holonplatform.core.beans.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @NotNull
-@Caption(message = "Vendor Name", messageCode = "bill.vendorName")
+@Caption(value = "Vendor Name", messageCode = "bill.vendorName")
 private String vendorName;
 ```
 
@@ -131,6 +131,66 @@ private Long customerId;        // store the FK value as a Long
 @Transient
 private Customer customer;      // loaded separately, not persisted via BeanPropertySet
 ```
+
+---
+
+### Audit & Version fields
+
+Every domain JavaBean **must** include the five audit/version fields below. They map
+directly to the mandatory audit columns added to every entity table by the
+`flyway-migration` skill.
+
+```java
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import jakarta.persistence.Version;   // @Version — standard JPA / Spring Data optimistic-lock marker
+import java.time.Instant;
+
+// ── Audit & version ──────────────────────────────────────────────────────────
+// IMPORTANT: use Instant (not LocalDateTime) for all timestamp fields so values
+// are stored and retrieved in UTC and can be converted to any user timezone at
+// display time.  See holon-vaadin-ui.md §"Timezone-aware display".
+
+@CreatedBy
+@DataPath("created_by")
+@Caption(value = "Created By", messageCode = "audit.createdBy")
+private String createdBy;
+
+@CreatedDate
+@DataPath("created_date")
+@Caption(value = "Created Date", messageCode = "audit.createdDate")
+private Instant createdDate;          // UTC — convert to user zone in the view
+
+@LastModifiedBy
+@DataPath("last_modified_by")
+@Caption(value = "Last Modified By", messageCode = "audit.lastModifiedBy")
+private String lastModifiedBy;
+
+@LastModifiedDate
+@DataPath("last_modified_date")
+@Caption(value = "Last Modified Date", messageCode = "audit.lastModifiedDate")
+private Instant lastModifiedDate;     // UTC — convert to user zone in the view
+
+@Version
+@DataPath("version")
+@Caption(value = "Version", messageCode = "audit.version")
+private Long version;
+```
+
+**Notes:**
+
+- `@Version` enables **optimistic locking**: the Holon Datastore checks that the
+  `version` value has not changed since the entity was loaded before issuing an `UPDATE`.
+  Increment is handled automatically.
+- `@CreatedBy` / `@LastModifiedBy` are populated automatically when Spring JPA
+  auditing is enabled (`@EnableJpaAuditing` on a `@Configuration` class, plus an
+  `AuditorAware<String>` bean that returns the current username). When using only the
+  Holon Datastore (no JPA), set `createdBy` / `lastModifiedBy` in the service layer before
+  calling `Datastore.save(...)`.
+- Audit fields are **not** typically shown in grids or forms; exclude them from the
+  `LISTING_SUBSET` and `FORM_SUBSET` defined in the companion `<Entity>Model`.
 
 ---
 
@@ -173,8 +233,25 @@ PathProperty<BigDecimal>    TOTAL      = PROPERTY_SET.property("total", BigDecim
 | `totalAmount` | `"total_amount"` | `total_amount` |
 | `createdAt` | `"created_at"` | `created_at` |
 | `customerId` (FK) | `"customer_id"` | `customer_id` |
+| `createdBy` | `"created_by"` | `created_by` |
+| `createdDate` | `"created_date"` | `created_date` |
+| `lastModifiedBy` | `"last_modified_by"` | `last_modified_by` |
+| `lastModifiedDate` | `"last_modified_date"` | `last_modified_date` |
+| `version` | `"version"` | `version` |
 
 Always derive column names from the field `@DataPath` values when writing Flyway migrations.
+
+### UTC timestamp rule
+
+All timestamp fields in every domain bean **must** use `java.time.Instant` (not
+`LocalDateTime`). `Instant` is always UTC, so the value stored in the database is
+unambiguous regardless of server location.
+
+- Flyway columns must be `TIMESTAMPTZ` (Postgres) or equivalent `TIMESTAMP WITH TIME ZONE`.
+- JVM startup: always pass `-Duser.timezone=UTC` (or set `spring.jpa.properties.hibernate.jdbc.time_zone=UTC` when Spring JPA is in use) to prevent driver-level timezone shifts.
+- **Display**: convert `Instant → ZonedDateTime` using the user's browser timezone captured via `ExtendedClientDetails` (see `holon-vaadin-ui.md` §"Timezone-aware display").
+- **Input**: when reading a `LocalDateTime` from a date-time picker, re-attach the user's `ZoneId` before saving: `picked.atZone(userZone).toInstant()`.
+- Never use `LocalDateTime.now()` for timestamps — use `Instant.now()` instead.
 
 ---
 
@@ -185,11 +262,11 @@ package com.example.ap.bill;   // feature package — bean, service, and view al
 
 import com.holonplatform.core.beans.DataPath;
 import com.holonplatform.core.beans.Identifier;
-import com.holonplatform.core.beans.NotNull;
 import com.holonplatform.core.beans.Sequence;
 import com.holonplatform.core.i18n.Caption;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @DataPath("bill")
 public class Bill {
@@ -199,42 +276,42 @@ public class Bill {
     @Identifier
     @DataPath("id")
     @Sequence(1)
-    @Caption(message = "ID", messageCode = "bill.id")
+    @Caption(value = "ID", messageCode = "bill.id")
     private Long id;
 
     @NotNull
     @DataPath("vendor_name")
     @Sequence(2)
-    @Caption(message = "Vendor Name", messageCode = "bill.vendorName")
+    @Caption(value = "Vendor Name", messageCode = "bill.vendorName")
     private String vendorName;
 
     @NotNull
     @DataPath("invoice_number")
     @Sequence(3)
-    @Caption(message = "Invoice Number", messageCode = "bill.invoiceNumber")
+    @Caption(value = "Invoice Number", messageCode = "bill.invoiceNumber")
     private String invoiceNumber;
 
     @NotNull
     @DataPath("invoice_date")
     @Sequence(4)
-    @Caption(message = "Invoice Date", messageCode = "bill.invoiceDate")
-    private LocalDateTime invoiceDate;
+    @Caption(value = "Invoice Date", messageCode = "bill.invoiceDate")
+    private Instant invoiceDate;  // stored as UTC; convert to user timezone in the view
 
     @NotNull
     @DataPath("total_amount")
     @Sequence(5)
-    @Caption(message = "Total Amount (USD)", messageCode = "bill.totalAmount")
+    @Caption(value = "Total Amount (USD)", messageCode = "bill.totalAmount")
     private BigDecimal totalAmount;
 
     @NotNull
     @DataPath("status")
     @Sequence(6)
-    @Caption(message = "Status", messageCode = "bill.status")
+    @Caption(value = "Status", messageCode = "bill.status")
     private String status;          // "PENDING_REVIEW", "APPROVED", "REJECTED"
 
     @DataPath("purchase_order_id")
     @Sequence(7)
-    @Caption(message = "Purchase Order", messageCode = "bill.purchaseOrderId")
+    @Caption(value = "Purchase Order", messageCode = "bill.purchaseOrderId")
     private Long purchaseOrderId;
 
     // getters / setters omitted for brevity

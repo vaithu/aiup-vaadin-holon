@@ -1,0 +1,90 @@
+name: Java Quality Gate
+
+# SonarQube-equivalent quality gate for the Java demo module (demo/crm-minimal),
+# built entirely from free/open-source tools — no SonarQube/SonarCloud account needed.
+#
+#   SpotBugs + FindSecBugs  → bugs + security vulnerabilities/hotspots (SAST)
+#   PMD (with CPD)          → code smells + duplicated-code detection
+#   Checkstyle              → code smells / conventions
+#   JaCoCo                  → test coverage (report + threshold check)
+#   OWASP Dependency-Check  → vulnerable-dependency (CVE) scanning
+#
+# All tools currently run in REPORT mode (see the `quality` profile in the pom):
+# findings are surfaced as artifacts and in the Code Scanning tab, but do not fail
+# the build until the baseline is triaged. This job therefore does not gate merges yet.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "demo/crm-minimal/**"
+      - ".github/workflows/java-quality.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "demo/crm-minimal/**"
+      - ".github/workflows/java-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF to the Code Scanning tab
+
+jobs:
+  java-quality:
+    name: crm-minimal quality gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demo/crm-minimal
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # Runs SpotBugs+FindSecBugs, PMD/CPD, Checkstyle, JaCoCo and OWASP Dependency-Check
+      # as one gate. `-fae` (fail-at-end) lets every tool report before the job result is
+      # decided; in report mode the plugins are non-failing anyway.
+      - name: Run quality gate (mvn -Pquality verify)
+        run: mvn -B -fae -Pquality verify
+
+      # ── Publish reports so findings are reviewable even in report mode ────────────
+      - name: Upload quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-minimal-quality-reports
+          if-no-files-found: ignore
+          path: |
+            demo/crm-minimal/target/spotbugs*.xml
+            demo/crm-minimal/target/spotbugs*.html
+            demo/crm-minimal/target/spotbugsSarif.json
+            demo/crm-minimal/target/pmd.xml
+            demo/crm-minimal/target/cpd.xml
+            demo/crm-minimal/target/checkstyle-result.xml
+            demo/crm-minimal/target/site/jacoco/**
+            demo/crm-minimal/target/dependency-check-report.*
+
+      # ── Surface SpotBugs/FindSecBugs findings inline on PRs (Sonar-like decoration) ─
+      - name: Upload SpotBugs SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: demo/crm-minimal/target/spotbugsSarif.json
+          category: spotbugs
+        continue-on-error: true
+
+      - name: Upload Dependency-Check SARIF to Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: demo/crm-minimal/target/dependency-check-report.sarif
+          category: owasp-dependency-check
+        continue-on-error: true

@@ -29,6 +29,7 @@ All illustrative code lives inside `SKILL.md` / `references/` files as fenced sn
         ├── flyway-migration/
         ├── implement/                       # /implement UC-XXX
         ├── implement-from-html/             # /implement-from-html <file>
+        ├── ai-assistant/              # /ai-assistant UC-XXX (free vaadin-ai-core-flow + Holon Datastore)
         ├── datastore-test/
         ├── holon-vaadin-test/
         └── playwright-test/
@@ -65,6 +66,7 @@ All illustrative code lives inside `SKILL.md` / `references/` files as fenced sn
 | Construction | `/flyway-migration`      | Create Flyway V*.sql migrations from `docs/entity_model.md`      |
 | Construction | `/implement UC-XXX`      | Implement a use case: JavaBean, BeanPropertySet, Datastore service, Holon Vaadin view, Holon Auth guards |
 | Construction | `/implement-from-html`   | Infer entities, roles, Holon Vaadin components from an HTML mockup |
+| Construction | `/ai-assistant UC-XXX`   | Add an AI-powered chat assistant (free `vaadin-ai-core-flow`: `AIOrchestrator`, `MessageList`/`MessageInput`, `SpringAILLMProvider`) backed by a Holon `Datastore` custom `AIController`/`DatabaseProvider`; no commercial AI controllers |
 | Construction | `/datastore-test UC-XXX` | JUnit 5 + Testcontainers Postgres + Flyway + Holon Datastore integration tests |
 | Construction | `/holon-vaadin-test UC-XXX` | Server-side Vaadin Browserless unit tests (vaadin-testbench-unit-junit) |
 | Construction | `/playwright-test UC-XXX`| Browser E2E tests via Playwright                                 |
@@ -75,7 +77,7 @@ All illustrative code lives inside `SKILL.md` / `references/` files as fenced sn
 - **Property set:** `BeanPropertySet<T>` — never raw `PropertySet`
 - **Persistence:** Holon `Datastore` JDBC (or JPA only when JDBC cannot express the query, justified inline)
 - **UI:** `Components.input.*`, `PropertyListing`, `PropertyForm`, `form.setBean()` / `form.getBean()`
-- **Security:** Holon Auth (`AuthContext`, `Realm`, `Authenticator`, `@Permitted`, `Permission`) — not Spring Security
+- **Security:** Holon Auth (`AuthContext`, `Realm`, `Authenticator`, `@Authenticate`, `@RolesAllowed`, `Permission`) — not Spring Security
 - **DI:** prefer Holon `Context`; `@Autowired` is banned — inject via constructors
 - **Spring stereotype:** `@SpringBootApplication` always permitted; `@Service` / `@Component` / `@Repository` allowed only when a class needs Spring lifecycle (`@Transactional`, `@EventListener`, `@Scheduled`)
 - **Fallback policy:** raw Vaadin or Spring allowed only when Holon has no equivalent, justified inline with `// FALLBACK: no Holon equivalent for <thing>`
@@ -107,4 +109,13 @@ grep -l 'BeanPropertySet' aiup-vaadin-holon/skills/implement/references/bean-mod
 
 # 5. AuthContext in security-patterns.md
 grep -l 'AuthContext' aiup-vaadin-holon/skills/implement/references/security-patterns.md
+
+# 6. The commercial Vaadin AI extensions must never be referenced as an allowed dependency
+#    (the ai-assistant skill uses the free vaadin-ai-core-flow only)
+git grep -n 'vaadin-ai-extensions-flow' aiup-vaadin-holon/ | grep -viE 'BANNED|banned|commercial|MUST NOT|not be used|never'
+# → should return NO hits
+
+# 7. Every construction SKILL.md (including ai-assistant) has a Constraints section
+grep -rL 'Constraints' aiup-vaadin-holon/skills/*/SKILL.md
+# → should return NO hits
 ```

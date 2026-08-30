@@ -17,7 +17,7 @@ Step 3 of the `/implement-from-html` pipeline.
 
 ## Role name normalisation
 
-Convert display names to code names used in `@Permitted` and `Realm` configuration:
+Convert display names to code names used in `@RolesAllowed` and `Realm` configuration:
 
 | HTML display name | Normalised code name | Convention |
 |------------------|---------------------|------------|
