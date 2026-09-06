@@ -1,0 +1,131 @@
+@startuml Use Cases Overview
+left to right direction
+
+actor "Tenant Administrator" as tenantAdmin
+actor "Sales Representative" as salesRep
+actor "Purchaser" as purchaser
+actor "Warehouse Operator" as warehouseOp
+actor "Quality Inspector" as qualityInsp
+actor "Finance Controller" as financeCtl
+actor "New User / Evaluator" as newUser
+
+rectangle "Acme CRM/ERP" {
+
+  rectangle "Self-Service Configuration" {
+    usecase "UC-T-001\nConfigure tenant settings\n(brand, locale, tax, fiscal year, numbering)" as UCT001
+    usecase "UC-T-002\nOnboard new tenant" as UCT002
+    usecase "UC-T-003\nSwitch active tenant" as UCT003
+  }
+
+  rectangle "Sales Cycle" {
+    usecase "UC-S-001\nCreate customer" as UCS001
+    usecase "UC-S-002\nIssue quote" as UCS002
+    usecase "UC-S-003\nConfirm order" as UCS003
+    usecase "UC-S-004\nPost invoice" as UCS004
+    usecase "UC-S-005\nRecord payment" as UCS005
+    usecase "UC-S-006\nView AR aging" as UCS006
+    usecase "UC-S-007\nLog activity" as UCS007
+    usecase "UC-S-008\nSet up subscription" as UCS008
+  }
+
+  rectangle "Purchasing Cycle" {
+    usecase "UC-P-001\nCreate vendor" as UCP001
+    usecase "UC-P-002\nIssue RFQ" as UCP002
+    usecase "UC-P-003\nPlace purchase order" as UCP003
+    usecase "UC-P-004\nReceive goods" as UCP004
+    usecase "UC-P-005\nProcess bill (3-way match)" as UCP005
+    usecase "UC-P-006\nRun payment batch" as UCP006
+    usecase "UC-P-007\nView AP aging" as UCP007
+    usecase "UC-P-008\nOpen vendor RMA" as UCP008
+  }
+
+  rectangle "Inventory" {
+    usecase "UC-I-001\nReceive stock" as UCI001
+    usecase "UC-I-002\nShip stock" as UCI002
+    usecase "UC-I-003\nAdjust stock" as UCI003
+    usecase "UC-I-004\nTransfer stock" as UCI004
+    usecase "UC-I-005\nBuild composite item" as UCI005
+    usecase "UC-I-006\nCycle count" as UCI006
+  }
+
+  rectangle "Quality" {
+    usecase "UC-Q-001\nRun inspection" as UCQ001
+    usecase "UC-Q-002\nOpen RMA" as UCQ002
+    usecase "UC-Q-003\nDisposition returned stock" as UCQ003
+  }
+
+  rectangle "Finance" {
+    usecase "UC-F-001\nPost journal entry" as UCF001
+    usecase "UC-F-002\nClose fiscal period" as UCF002
+    usecase "UC-F-003\nRun payment batch" as UCF003
+    usecase "UC-F-004\nFX revaluation" as UCF004
+  }
+
+  rectangle "Reporting" {
+    usecase "UC-R-001\nRun report (financial)" as UCR001
+    usecase "UC-R-002\nExport report (inventory)" as UCR002
+  }
+
+  rectangle "Demo & Onboarding" {
+    usecase "UC-D-001\nBoot demo tenant" as UCD001
+  }
+}
+
+' --- Self-Service Configuration ---
+tenantAdmin --> UCT001
+tenantAdmin --> UCT002
+tenantAdmin --> UCT003
+
+' --- Sales Cycle ---
+salesRep --> UCS001
+salesRep --> UCS002
+salesRep --> UCS003
+salesRep --> UCS004
+salesRep --> UCS005
+salesRep --> UCS006
+salesRep --> UCS007
+salesRep --> UCS008
+UCS002 ..> UCS003 : <<extend>>
+
+' --- Purchasing Cycle ---
+purchaser --> UCP001
+purchaser --> UCP002
+purchaser --> UCP003
+purchaser --> UCP004
+purchaser --> UCP005
+purchaser --> UCP006
+purchaser --> UCP007
+purchaser --> UCP008
+UCP002 ..> UCP003 : <<extend>>
+
+' --- Inventory ---
+warehouseOp --> UCI001
+warehouseOp --> UCI002
+warehouseOp --> UCI003
+warehouseOp --> UCI004
+warehouseOp --> UCI005
+warehouseOp --> UCI006
+warehouseOp --> UCR002
+
+' --- Quality ---
+qualityInsp --> UCQ001
+qualityInsp --> UCQ002
+qualityInsp --> UCQ003
+UCP004 ..> UCQ001 : <<extend>>
+UCQ001 ..> UCQ002 : <<extend>>
+
+' --- Finance ---
+financeCtl --> UCF001
+financeCtl --> UCF002
+financeCtl --> UCF003
+financeCtl --> UCF004
+financeCtl --> UCR001
+
+' --- Reporting: tenant admin adds point-in-time / export / schedule (FR-R-003/004/005) ---
+tenantAdmin --> UCR001
+tenantAdmin --> UCR002
+
+' --- Demo & Onboarding ---
+newUser --> UCD001
+
+@enduml

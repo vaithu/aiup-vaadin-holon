@@ -1,0 +1,83 @@
+/*
+ * Design tokens for the Acme CRM demo (UC-S-001 "Create Customer").
+ * Loaded via @StyleSheet("styles.css") on the application shell.
+ * No colors / spacing / radii are hard-coded in Java — every custom visual value used by
+ * com.example.crm.* views is defined here as a CSS custom property or utility class.
+ */
+
+html {
+	--crm-color-primary: #1a56db;
+	--crm-color-primary-contrast: #ffffff;
+	--crm-color-surface: #ffffff;
+	--crm-color-surface-alt: #f8fafc;
+	--crm-color-border: #e2e8f0;
+	--crm-color-text: #1e293b;
+	--crm-color-text-muted: #64748b;
+
+	--crm-radius-sm: 4px;
+	--crm-radius-md: 8px;
+	--crm-radius-lg: 12px;
+
+	--crm-space-xs: 4px;
+	--crm-space-sm: 8px;
+	--crm-space-md: 16px;
+	--crm-space-lg: 24px;
+	--crm-space-xl: 32px;
+
+	--crm-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* --- New Customer view layout (two-column: form + preview/checklist) --- */
+.crm-new-customer-root {
+	display: flex;
+	gap: var(--crm-space-lg);
+	padding: var(--crm-space-lg);
+	align-items: flex-start;
+	flex-wrap: wrap;
+}
+
+.crm-new-customer-main {
+	flex: 2 1 640px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-md);
+}
+
+.crm-new-customer-side {
+	flex: 1 1 280px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--crm-space-md);
+	position: sticky;
+	top: var(--crm-space-lg);
+}
+
+/* --- Generic form field row (used to lay out sibling inputs side-by-side) --- */
+.crm-form-row {
+	display: flex;
+	gap: var(--crm-space-md);
+	flex-wrap: wrap;
+}
+
+.crm-form-row > * {
+	flex: 1 1 200px;
+}
+
+/* --- Cards --- */
+.crm-card {
+	background: var(--crm-color-surface);
+	border: 1px solid var(--crm-color-border);
+	border-radius: var(--crm-radius-md);
+	box-shadow: var(--crm-shadow-card);
+	padding: var(--crm-space-md);
+}
+
+@media (max-width: 900px) {
+	.crm-new-customer-root {
+		flex-direction: column;
+	}
+
+	.crm-new-customer-side {
+		position: static;
+	}
+}

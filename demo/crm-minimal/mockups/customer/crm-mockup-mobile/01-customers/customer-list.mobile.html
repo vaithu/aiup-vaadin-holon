@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Acme CRM — Customers (mobile list · Vaadin Mockup)</title>
+<meta name="viewport" content="width=390,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>:root{--bg:#f3f5f8;--surface:#fff;--surface-2:#f8fafc;--line:#e4e9f0;--line-soft:#eef1f6;--text:#0f1b2d;--text-mute:#5b6878;--text-dim:#8a96a6;--primary:#1576d3;--primary-soft:#e6f1fb;--primary-2:#0a5fb8;--success:#2e9a6a;--success-soft:#e6f5ee;--warn:#b8860b;--warn-soft:#fbf3dc;--danger:#c0392b;--danger-soft:#fbe7e4;--violet:#6f7afc;--violet-soft:#eceefd;--teal:#0d9488;--gold:#d4a017;--gold-soft:#fdf3d1;--shadow-sm:0 1px 2px rgba(15,27,45,.04),0 1px 1px rgba(15,27,45,.03);--shadow-md:0 4px 14px -2px rgba(15,27,45,.06),0 2px 4px rgba(15,27,45,.04)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;padding:0;background:#1a1a1a;font-family:'Inter',system-ui,sans-serif;color:var(--text);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.phone{width:390px;height:844px;background:var(--bg);margin:0 auto;position:relative;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,0.4),0 0 0 8px #000,0 0 0 9px #1a1a1a;border-radius:48px}
+.notch{position:absolute;top:0;left:0;right:0;height:30px;z-index:100;pointer-events:none;background:#000}
+.notch::before{content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);width:110px;height:24px;background:#000;border-radius:0 0 18px 18px}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 6px;font-size:13px;font-weight:600;background:var(--surface);position:relative;z-index:5;flex-shrink:0}
+.ubar{height:50px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0}
+.ubar-t{flex:1}
+.ubar-t .nm{font-size:14.5px;font-weight:600;letter-spacing:-0.01em}
+.ubar-t .sub{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-top:1px}
+.icon-btn{width:34px;height:34px;border-radius:50%;border:none;background:transparent;color:var(--text-mute);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.search{padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--line-soft);position:relative;flex-shrink:0}
+.search input{width:100%;height:36px;padding:0 12px 0 36px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;font:400 13px 'Inter';outline:none}
+.search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.search .ic{position:absolute;left:22px;top:50%;transform:translateY(-50%);color:var(--text-dim)}
+.chips{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--line-soft);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.chips::-webkit-scrollbar{display:none}
+.chip{font-size:11px;font-weight:500;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--text-mute);cursor:pointer;border:1px solid var(--line-soft);white-space:nowrap;display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
+.chip .num{font-size:9.5px;padding:0 4px;border-radius:6px;background:rgba(255,255,255,0.6);font-family:'JetBrains Mono',monospace;font-weight:600}
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg)}
+.list::-webkit-scrollbar{width:0}
+.li{padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;position:relative;cursor:pointer}
+.li.on{background:var(--primary-soft)}
+.li.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary)}
+.li-av{width:36px;height:36px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,#1576d3,#0a5fb8);color:#fff;font-weight:600;font-size:11.5px;display:flex;align-items:center;justify-content:center}
+.li-body{flex:1;min-width:0}
+.li-nm{font-size:13px;font-weight:600;line-height:1.2;display:flex;align-items:center;gap:5px}
+.li-star{color:var(--gold);font-size:11px}
+.li-meta{font-size:10.5px;color:var(--text-mute);font-family:'JetBrains Mono',monospace;margin-top:1.5px}
+.li-r{text-align:right;flex-shrink:0}
+.li-amt{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600}
+.li-st{font-size:9.5px;font-weight:500;padding:1px 6px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;margin-top:2px}
+.li-st::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor}
+.li-st.s{background:var(--success-soft);color:var(--success)}
+.li-st.w{background:var(--warn-soft);color:var(--warn)}
+.li-st.d{background:var(--danger-soft);color:var(--danger)}
+.fab{position:absolute;bottom:18px;right:18px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#4a9be5);color:#fff;border:none;box-shadow:0 4px 12px rgba(21,118,211,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:9}
+.tb{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:120px;height:4px;background:#000;border-radius:2px;z-index:50}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="sbar"><span>9:41</span></div>
+  <div class="ubar">
+    <div class="ubar-t"><div class="nm">Customers</div><div class="sub">342 · 12 alerts</div></div>
+    <button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg></button>
+    <button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+  </div>
+  <div class="search">
+    <svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input placeholder="Search customers…" />
+  </div>
+  <div class="chips">
+    <div class="chip on">All <span class="num">342</span></div>
+    <div class="chip">⭐ T1 <span class="num">28</span></div>
+    <div class="chip">⭐ T2 <span class="num">64</span></div>
+    <div class="chip">Overdue <span class="num">12</span></div>
+    <div class="chip">Trial</div>
+  </div>
+  <div class="list">
+    <div class="li on">
+      <div class="li-av">HR</div>
+      <div class="li-body">
+        <div class="li-nm">Helix Robotics SE <span class="li-star">⭐</span></div>
+        <div class="li-meta">C-2026-0023 · Munich · EMEA</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€14.8K</div>
+        <div class="li-st w">14d overdue</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#0d9488,#0a7268)">PT</div>
+      <div class="li-body">
+        <div class="li-nm">PrahaTech s.r.o.</div>
+        <div class="li-meta">C-2026-0019 · Prague</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€0</div>
+        <div class="li-st s">● Active</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#6f7afc,#4756c9)">LH</div>
+      <div class="li-body">
+        <div class="li-nm">Lumen Health <span class="li-star">⭐</span></div>
+        <div class="li-meta">C-2026-0011 · Vienna</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€42K</div>
+        <div class="li-st s">● Active</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#d4a017,#a87f0a)">TG</div>
+      <div class="li-body">
+        <div class="li-nm">TechGuard AG</div>
+        <div class="li-meta">C-2026-0042 · Berlin</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€8.2K</div>
+        <div class="li-st s">● Active</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#b8860b,#8a6300)">AL</div>
+      <div class="li-body">
+        <div class="li-nm">Atelier Lyon</div>
+        <div class="li-meta">C-2026-0073 · Lyon</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€3.1K</div>
+        <div class="li-st s">● Active</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#0d9488,#0a7268)">NW</div>
+      <div class="li-body">
+        <div class="li-nm">Northwind AB</div>
+        <div class="li-meta">C-2026-0088 · Stockholm</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€22K</div>
+        <div class="li-st d">62d overdue</div>
+      </div>
+    </div>
+    <div class="li">
+      <div class="li-av" style="background:linear-gradient(135deg,#c0392b,#8e2820)">BM</div>
+      <div class="li-body">
+        <div class="li-nm">Benelux Maritime</div>
+        <div class="li-meta">C-2026-0099 · Rotterdam</div>
+      </div>
+      <div class="li-r">
+        <div class="li-amt">€0</div>
+        <div class="li-st">Trial</div>
+      </div>
+    </div>
+  </div>
+  <button class="fab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  <div class="tb"></div>
+</div>
+</body>
+</html>

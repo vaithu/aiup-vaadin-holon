@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Minimal SpotBugs/FindSecBugs exclude filter for crm-minimal.
+
+    Deliberately near-empty: the quality profile runs in report mode
+    (spotbugs.failOnError=false), so real findings should stay visible in the report rather
+    than be silently filtered. Only add exclusions here for confirmed false positives coming
+    from generated code (Vaadin flow-build-info.json / frontend bundling artifacts are not
+    Java classes and are never analyzed by SpotBugs in the first place, so no entry is needed
+    for them) or framework-driven patterns that SpotBugs cannot see through, e.g. fields
+    populated exclusively via Holon's @QueryParameter/@OnShow reflection.
+-->
+<FindBugsFilter>
+
+    <!--
+        Holon Vaadin Flow's @QueryParameter-annotated fields (see CustomerMasterDetailView.id)
+        are set reflectively by the navigator at runtime and read from an @OnShow method in the
+        same class; SpotBugs' URF_UNREAD_FIELD / UUF_UNUSED_FIELD detectors do not understand
+        this framework wiring pattern.
+    -->
+    <Match>
+        <Class name="com.example.crm.customer.CustomerMasterDetailView"/>
+        <Field name="id"/>
+        <Bug pattern="URF_UNREAD_FIELD,UUF_UNUSED_FIELD"/>
+    </Match>
+
+</FindBugsFilter>

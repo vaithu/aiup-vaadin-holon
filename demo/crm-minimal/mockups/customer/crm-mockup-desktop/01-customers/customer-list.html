@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Acme CRM — Customers list (Vaadin Mockup)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f8;--surface:#fff;--surface-2:#f8fafc;--line:#e4e9f0;--line-soft:#eef1f6;--text:#0f1b2d;--text-mute:#5b6878;--text-dim:#8a96a6;--primary:#1576d3;--primary-soft:#e6f1fb;--primary-2:#0a5fb8;--success:#2e9a6a;--success-soft:#e6f5ee;--warn:#b8860b;--warn-soft:#fbf3dc;--danger:#c0392b;--danger-soft:#fbe7e4;--violet:#6f7afc;--violet-soft:#eceefd;--teal:#0d9488;--gold:#d4a017;--gold-soft:#fdf3d1;--shadow-sm:0 1px 2px rgba(15,27,45,.04),0 1px 1px rgba(15,27,45,.03);--shadow-md:0 4px 14px -2px rgba(15,27,45,.06),0 2px 4px rgba(15,27,45,.04)}
+*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+.appbar{height:56px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;gap:16px;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:240px}
+.brand-mark{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--primary),#4a9be5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px}
+.brand-name{font-weight:600;font-size:15px;letter-spacing:-0.01em}
+.brand-sub{color:var(--text-dim);font-size:12px;margin-left:4px}
+.app-search{flex:1;max-width:520px;position:relative}
+.app-search input{width:100%;height:36px;padding:0 12px 0 36px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--text);outline:none}
+.app-search input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.app-search .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim)}
+.appbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:var(--text-mute);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;position:relative}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.icon-btn .dot{position:absolute;top:8px;right:9px;width:8px;height:8px;background:var(--danger);border-radius:50%;border:2px solid #fff}
+.user-chip{display:flex;align-items:center;gap:10px;padding:4px 10px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ec6f9e,#c0392b);color:#fff;font-weight:600;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.user-name{font-size:13px;font-weight:500}
+.user-role{font-size:11px;color:var(--text-dim);margin-left:6px}
+
+.layout{display:grid;grid-template-columns:64px 1fr;height:calc(100vh - 56px);min-height:920px}
+.sidenav{background:var(--surface);border-right:1px solid var(--line);padding:14px 0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.nav-item{width:40px;height:40px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-mute);cursor:pointer;position:relative}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:var(--primary-soft);color:var(--primary)}
+.nav-item.active::before{content:'';position:absolute;left:-8px;top:8px;bottom:8px;width:3px;background:var(--primary);border-radius:2px}
+.nav-item .lbl{position:absolute;left:50px;top:50%;transform:translateY(-50%);background:#0f1b2d;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:99}
+.nav-item:hover .lbl{opacity:1}
+
+.canvas{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+
+/* Page header */
+.p-head{background:var(--surface);padding:18px 28px 14px;border-bottom:1px solid var(--line)}
+.p-breadcrumb{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.p-breadcrumb .sep{color:var(--text-dim);margin:0 6px}
+.p-breadcrumb .here{color:var(--primary);font-weight:600}
+.p-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.p-title h1{font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.p-title h1 .count{font-size:13px;color:var(--text-dim);font-weight:500;font-family:'JetBrains Mono',monospace}
+.p-title .sub{font-size:12.5px;color:var(--text-mute);font-family:'JetBrains Mono',monospace}
+.p-actions{display:flex;gap:6px;align-items:center}
+.icon-btn2{height:34px;width:34px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--text-mute);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.icon-btn2:hover{background:var(--surface-2);color:var(--text)}
+.btn{height:34px;padding:0 14px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:500 13px 'Outfit';display:inline-flex;align-items:center;gap:6px;cursor:pointer;box-shadow:var(--shadow-sm)}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-2);border-color:var(--primary-2)}
+
+/* Stat cards */
+.stats{padding:16px 28px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;background:var(--bg)}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 14px;box-shadow:var(--shadow-sm)}
+.stat .k{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600;display:flex;align-items:center;gap:5px}
+.stat .v{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;margin-top:4px;line-height:1.1}
+.stat .v.ok{color:var(--success-2)}
+.stat .v.warn{color:var(--warn)}
+.stat .s{font-size:10.5px;color:var(--text-mute);margin-top:2px;display:flex;align-items:center;gap:4px}
+.stat .s .up{color:var(--success-2);font-weight:600}
+.stat .s .down{color:var(--danger);font-weight:600}
+
+/* Filter / view bar */
+.viewbar{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search2{position:relative;min-width:280px;flex:1;max-width:360px}
+.search2 input{width:100%;height:32px;padding:0 12px 0 32px;background:var(--surface-2);border:1px solid var(--line);border-radius:7px;font:400 12.5px 'Outfit';color:var(--text);outline:none}
+.search2 input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.search2 .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-dim)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{font-size:11.5px;font-weight:500;padding:5px 11px;border-radius:999px;background:var(--surface-2);color:var(--text-mute);cursor:pointer;border:1px solid var(--line-soft);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.chip.on{background:var(--primary-soft);color:var(--primary);border-color:var(--primary)}
+.chip .num{font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.85;font-weight:600}
+.spacer{flex:1}
+.sort{font-size:11.5px;color:var(--text-mute);display:inline-flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:6px}
+.sort:hover{background:var(--surface-2)}
+
+/* Table card */
+.tbl-card{flex:1;background:var(--surface);border-top:1px solid var(--line);margin:0 28px 28px;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column}
+.tbl-head{padding:10px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+.tbl-head .t{font-size:12.5px;color:var(--text-mute);font-weight:500}
+.tbl-head .t b{color:var(--text);font-weight:600}
+.tbl-head .v{display:flex;align-items:center;gap:6px}
+.tbl-head .v a{font-size:11.5px;color:var(--primary);font-weight:500;cursor:pointer}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl thead th{position:sticky;top:0;background:var(--surface-2);padding:9px 14px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);font-weight:600;border-bottom:1px solid var(--line-soft);z-index:1;white-space:nowrap}
+.tbl thead th .ic{vertical-align:-2px;margin-right:3px;color:var(--text-dim)}
+.tbl thead th.sorted{color:var(--primary)}
+.tbl thead th.c{text-align:center}
+.tbl thead th.r{text-align:right}
+.tbl tbody tr{border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .1s}
+.tbl tbody tr:hover{background:var(--surface-2)}
+.tbl tbody tr.on{background:var(--primary-soft)}
+.tbl tbody tr.on td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+.tbl tbody td{padding:10px 14px;vertical-align:middle}
+.tbl .cust{display:flex;align-items:center;gap:9px}
+.tbl .cust-av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:10.5px;letter-spacing:0.02em}
+.tbl .cust-name{font-size:12.5px;font-weight:600;line-height:1.15;display:flex;align-items:center;gap:5px}
+.tbl .cust-name .star{color:var(--gold);font-size:10.5px}
+.tbl .cust-meta{font-size:10.5px;color:var(--text-mute);font-family:'JetBrains Mono',monospace;margin-top:1px}
+.tbl .mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-mute)}
+.tbl .r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+.tbl .c{text-align:center}
+.status-pill{font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.status-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.st-active{background:var(--success-soft);color:var(--success)}
+.st-overdue{background:var(--warn-soft);color:var(--warn)}
+.st-trial{background:var(--violet-soft);color:var(--violet)}
+.st-onboard{background:var(--primary-soft);color:var(--primary)}
+.st-churn{background:var(--danger-soft);color:var(--danger)}
+.tier{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-block;letter-spacing:0.02em}
+.tier.t1{background:var(--gold-soft);color:#8a6300}
+.tier.t2{background:var(--primary-soft);color:var(--primary)}
+.tier.t3{background:var(--surface-2);color:var(--text-mute)}
+.tier.prospect{background:var(--violet-soft);color:#4756c9}
+
+.tbl-foot{padding:9px 16px;border-top:1px solid var(--line-soft);background:var(--surface-2);display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--text-mute)}
+.pager{display:flex;align-items:center;gap:4px}
+.pager .pg{min-width:26px;height:26px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--text-mute);font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 7px}
+.pager .pg.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pager .pg:hover:not(.on){background:var(--surface-2);color:var(--text)}
+
+.vaadin-tag{position:fixed;bottom:14px;right:16px;font-size:10.5px;color:var(--text-dim);background:var(--surface);border:1px solid var(--line);padding:4px 10px;border-radius:999px;box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;gap:6px;z-index:9}
+.vaadin-tag .vaadin-mark{width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,var(--primary),#4a9be5)}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand"><div class="brand-mark">A</div><div><span class="brand-name">Acme CRM</span> <span class="brand-sub">v3.4</span></div></div>
+  <div class="app-search"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search customers, contacts, deals… (⌘K)" /></div>
+  <div class="appbar-right">
+    <button class="icon-btn" title="Notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+    <div class="user-chip"><span class="avatar">EL</span><span><span class="user-name">Elena Lindqvist</span></span><span class="user-role">Sales Manager</span></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidenav">
+    <div class="nav-item" title="Dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="lbl">Dashboard</span></div>
+    <div class="nav-item active" title="Customers"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="lbl">Customers</span></div>
+    <div class="nav-item" title="Deals"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+    <div class="nav-item" title="Quotes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <div class="nav-item" title="Sales orders"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+    <div class="nav-item" title="Invoices"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <div class="nav-item" title="Pipeline"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+    <div class="nav-item" title="Reports"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+    <div class="nav-item" title="Settings" style="margin-top:auto"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+  </nav>
+
+  <div class="canvas">
+    <div class="p-head">
+      <div class="p-breadcrumb"><span>CRM</span><span class="sep">›</span><span class="here">Customers</span></div>
+      <div class="p-title-row">
+        <div class="p-title">
+          <h1>Customers <span class="count">342 total</span></h1>
+          <div class="sub">28 ★ T1 · 64 ★ T2 · 18 trial · 12 overdue</div>
+        </div>
+        <div class="p-actions">
+          <button class="icon-btn2" title="Filter"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+          <button class="icon-btn2" title="Export CSV"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+          <button class="icon-btn2" title="Columns"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></button>
+          <button class="btn btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New customer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="k"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Total customers</div><div class="v">342</div><div class="s"><span class="up">↑ 18</span> this quarter</div></div>
+      <div class="stat"><div class="k">★ T1 strategic</div><div class="v" style="color:var(--gold)">28</div><div class="s">8.2% of base · <span class="up">↑ 2</span></div></div>
+      <div class="stat"><div class="k">Open AR balance</div><div class="v warn">€184.6K</div><div class="s">12 overdue · <span class="down">↑ €22K</span></div></div>
+      <div class="stat"><div class="k">Net new ARR (90d)</div><div class="v ok">€312K</div><div class="s"><span class="up">↑ 14%</span> vs prior 90d</div></div>
+      <div class="stat"><div class="k">Churn risk</div><div class="v warn">9</div><div class="s">NPS &lt; 40 · 3 follow-ups due</div></div>
+    </div>
+
+    <div class="viewbar">
+      <div class="search2">
+        <svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search by name, VAT, city, contact…" />
+      </div>
+      <div class="chips">
+        <span class="chip on">All <span class="num">342</span></span>
+        <span class="chip">★ T1 <span class="num">28</span></span>
+        <span class="chip">★ T2 <span class="num">64</span></span>
+        <span class="chip">Trial <span class="num">18</span></span>
+        <span class="chip">Onboarding <span class="num">7</span></span>
+        <span class="chip">Overdue <span class="num">12</span></span>
+        <span class="chip">Churn-risk <span class="num">9</span></span>
+      </div>
+      <div class="spacer"></div>
+      <div class="sort"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 9h7"/><path d="M11 13h4"/><path d="m3 17 3 3 3-3"/><path d="M6 18V4"/></svg>Sort: Open AR ↓</div>
+    </div>
+
+    <div class="tbl-card">
+      <div class="tbl-head">
+        <div class="t">Showing <b>1–10</b> of <b>342</b> customers</div>
+        <div class="v">
+          <a>Density: comfortable</a>
+          <span style="color:var(--text-dim)">·</span>
+          <a>Group by: none</a>
+        </div>
+      </div>
+      <div style="overflow:auto;flex:1">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th class="sorted" style="min-width:280px">Customer</th>
+            <th>Region</th>
+            <th>Tier</th>
+            <th>Owner</th>
+            <th class="r">Open AR</th>
+            <th class="c">Open SOs</th>
+            <th class="r">ARR</th>
+            <th>Status</th>
+            <th>Last activity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="on">
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#1576d3,#0a5fb8)">HR</div><div><div class="cust-name">Helix Robotics SE <span class="star">★</span></div><div class="cust-meta">C-2026-0023 · DE 284 720 91</div></div></div></td>
+            <td><span class="mono">EMEA · DACH</span></td>
+            <td><span class="tier t1">★ T1</span></td>
+            <td>Elena Lindqvist</td>
+            <td class="r" style="color:var(--warn)">14,810</td>
+            <td class="c">3</td>
+            <td class="r">1,840,000</td>
+            <td><span class="status-pill st-overdue">14d overdue</span></td>
+            <td><span class="mono">2h ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#0d9488,#0a7268)">PT</div><div><div class="cust-name">PrahaTech s.r.o. <span class="star">★</span></div><div class="cust-meta">C-2026-0019 · CZ 2871 9912</div></div></div></td>
+            <td><span class="mono">EMEA · DACH</span></td>
+            <td><span class="tier t1">★ T1</span></td>
+            <td>Elena Lindqvist</td>
+            <td class="r" style="color:var(--success-2)">0</td>
+            <td class="c">2</td>
+            <td class="r">1,220,000</td>
+            <td><span class="status-pill st-active">● Active</span></td>
+            <td><span class="mono">5h ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#6f7afc,#4756c9)">LH</div><div><div class="cust-name">Lumen Health AG <span class="star">★</span></div><div class="cust-meta">C-2026-0011 · AT 484 220 91</div></div></div></td>
+            <td><span class="mono">EMEA · DACH</span></td>
+            <td><span class="tier t1">★ T1</span></td>
+            <td>Maria Schmidt</td>
+            <td class="r">42,600</td>
+            <td class="c">4</td>
+            <td class="r">2,140,000</td>
+            <td><span class="status-pill st-active">● Active</span></td>
+            <td><span class="mono">Yesterday</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#d4a017,#a87f0a)">TG</div><div><div class="cust-name">TechGuard Security AG</div><div class="cust-meta">C-2026-0042 · DE 312 884 901</div></div></div></td>
+            <td><span class="mono">EMEA · DACH</span></td>
+            <td><span class="tier t2">★ T2</span></td>
+            <td>Maria Schmidt</td>
+            <td class="r">8,200</td>
+            <td class="c">2</td>
+            <td class="r">684,000</td>
+            <td><span class="status-pill st-onboard">Onboarding</span></td>
+            <td><span class="mono">3d ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#b8860b,#8a6300)">AT</div><div><div class="cust-name">Atelier Tremblay</div><div class="cust-meta">C-2026-0073 · FR 401 220 911</div></div></div></td>
+            <td><span class="mono">EMEA · FR</span></td>
+            <td><span class="tier t3">★ T3</span></td>
+            <td>Maria Schmidt</td>
+            <td class="r" style="color:var(--success-2)">0</td>
+            <td class="c">1</td>
+            <td class="r">186,000</td>
+            <td><span class="status-pill st-active">● Active</span></td>
+            <td><span class="mono">1w ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#0d9488,#0a7268)">NW</div><div><div class="cust-name">Northwind Logistics AB</div><div class="cust-meta">C-2026-0088 · SE 556 220 9111</div></div></div></td>
+            <td><span class="mono">EMEA · NORDIC</span></td>
+            <td><span class="tier t2">★ T2</span></td>
+            <td>Tom Becker</td>
+            <td class="r" style="color:var(--danger)">22,000</td>
+            <td class="c">0</td>
+            <td class="r">412,000</td>
+            <td><span class="status-pill st-churn">Churn-risk</span></td>
+            <td><span class="mono">2w ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#c0392b,#8e2820)">BM</div><div><div class="cust-name">Benelux Maritime BV</div><div class="cust-meta">C-2026-0099 · NL 800 220 911 B01</div></div></div></td>
+            <td><span class="mono">EMEA · BENELUX</span></td>
+            <td><span class="tier prospect">Prospect</span></td>
+            <td>Tom Becker</td>
+            <td class="r" style="color:var(--success-2)">0</td>
+            <td class="c">0</td>
+            <td class="r">—</td>
+            <td><span class="status-pill st-trial">Trial · 14d left</span></td>
+            <td><span class="mono">3w ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#1576d3,#0a5fb8)">AA</div><div><div class="cust-name">Atlas Aerospace Ltd</div><div class="cust-meta">C-2026-0058 · UK 824 901 821</div></div></div></td>
+            <td><span class="mono">EMEA · UK/IE</span></td>
+            <td><span class="tier t1">★ T1</span></td>
+            <td>Elena Lindqvist</td>
+            <td class="r">6,400</td>
+            <td class="c">1</td>
+            <td class="r">1,120,000</td>
+            <td><span class="status-pill st-active">● Active</span></td>
+            <td><span class="mono">2d ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#6f7afc,#4756c9)">SF</div><div><div class="cust-name">SolarFlex Energy Inc</div><div class="cust-meta">C-2026-0102 · US 47-820 9911</div></div></div></td>
+            <td><span class="mono">AMER · N</span></td>
+            <td><span class="tier t2">★ T2</span></td>
+            <td>Anneliese Brandt</td>
+            <td class="r">18,420</td>
+            <td class="c">3</td>
+            <td class="r">540,000</td>
+            <td><span class="status-pill st-active">● Active</span></td>
+            <td><span class="mono">4d ago</span></td>
+          </tr>
+          <tr>
+            <td><div class="cust"><div class="cust-av" style="background:linear-gradient(135deg,#d4a017,#a87f0a)">BN</div><div><div class="cust-name">BioNova Diagnostics Pte</div><div class="cust-meta">C-2026-0115 · SG 201712991K</div></div></div></td>
+            <td><span class="mono">APAC</span></td>
+            <td><span class="tier t2">★ T2</span></td>
+            <td>Anneliese Brandt</td>
+            <td class="r" style="color:var(--success-2)">0</td>
+            <td class="c">1</td>
+            <td class="r">328,000</td>
+            <td><span class="status-pill st-onboard">Onboarding</span></td>
+            <td><span class="mono">1d ago</span></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="tbl-foot">
+        <div>1–10 of 342 · selected: <b>1</b> (Helix Robotics)</div>
+        <div class="pager">
+          <span class="pg">‹</span>
+          <span class="pg on">1</span>
+          <span class="pg">2</span>
+          <span class="pg">3</span>
+          <span class="pg">…</span>
+          <span class="pg">35</span>
+          <span class="pg">›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="vaadin-tag"><span class="vaadin-mark"></span>Mock-up · Vaadin Flow · Customers list</div>
+
+</body>
+</html>

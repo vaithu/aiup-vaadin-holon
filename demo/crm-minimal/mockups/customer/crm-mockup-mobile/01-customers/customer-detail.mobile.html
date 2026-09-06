@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Acme CRM — Helix Robotics (mobile · Vaadin Mockup)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f5f8;--surface:#fff;--surface-2:#f8fafc;--line:#e4e9f0;--line-soft:#eef1f6;--text:#0f1b2d;--text-mute:#5b6878;--text-dim:#8a96a6;--primary:#1576d3;--primary-soft:#e6f1fb;--primary-2:#0a5fb8;--success:#2e9a6a;--success-soft:#e6f5ee;--success-2:#1d7a52;--warn:#b8860b;--warn-soft:#fbf3dc;--danger:#c0392b;--danger-soft:#fbe7e4;--violet:#6f7afc;--violet-soft:#eceefd;--teal:#0d9488;--teal-soft:#d9f5f1;--gold:#d4a017;--gold-soft:#fdf3d1;--shadow-sm:0 1px 2px rgba(15,27,45,.04),0 1px 1px rgba(15,27,45,.03);--shadow-md:0 4px 14px -2px rgba(15,27,45,.06),0 2px 4px rgba(15,27,45,.04)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#1a1a1a;font-family:'Outfit',system-ui,sans-serif;color:var(--text);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+/* iPhone 14 Pro frame */
+.phone{width:390px;height:844px;background:var(--bg);margin:24px auto;position:relative;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,0.4),0 0 0 8px #000,0 0 0 9px #1a1a1a;border-radius:48px}
+.notch{position:absolute;top:0;left:0;right:0;height:30px;z-index:100;pointer-events:none;background:#000}
+.notch::before{content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);width:110px;height:24px;background:#000;border-radius:0 0 18px 18px}
+
+/* Status bar */
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 6px;font-size:13px;font-weight:600;background:var(--surface);position:relative;z-index:5;flex-shrink:0}
+.sbar .r{display:flex;align-items:center;gap:4px;color:var(--text)}
+
+/* Top app bar */
+.ubar{height:52px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;position:relative;z-index:4}
+.back{width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ubar-t{flex:1;min-width:0}
+.ubar-t .crumb{font-size:10.5px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;letter-spacing:.02em}
+.ubar-t .nm{font-size:14.5px;font-weight:600;letter-spacing:-0.01em;line-height:1.15;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ubar-btn{width:34px;height:34px;border-radius:50%;border:none;background:transparent;color:var(--text-mute);cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Scroll body */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative}
+.scroll::-webkit-scrollbar{width:0}
+
+/* Hero — dark gradient card with status + key metrics (mirrors desktop acc-strip) */
+.hero{background:linear-gradient(135deg,#0f1b2d,#1a3554);color:#fff;padding:18px 18px 16px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;top:0;right:0;bottom:0;width:50%;background:radial-gradient(circle at 80% 50%,rgba(111,122,252,0.22),transparent 60%);pointer-events:none}
+.h-row{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.h-thumb{width:54px;height:54px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#4a9be5);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 10px rgba(0,0,0,0.25);position:relative}
+.h-thumb .ribbon{position:absolute;top:-4px;right:-4px;background:var(--gold);color:#fff;font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.04em;box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+.h-body{flex:1;min-width:0}
+.h-name{font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.15;display:flex;align-items:center;gap:5px}
+.h-name .star{color:var(--gold);font-size:13px}
+.h-meta{font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px;font-family:'JetBrains Mono',monospace;line-height:1.3}
+.h-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;position:relative;z-index:1}
+.h-tag{font-size:10px;font-weight:600;padding:3px 7px;border-radius:4px;display:inline-flex;align-items:center;gap:3px;letter-spacing:.02em}
+.h-tag.ok{background:rgba(46,154,106,0.22);color:#a7f3d0}
+.h-tag.pri{background:rgba(212,160,23,0.22);color:#fde68a}
+.h-tag.prim{background:rgba(21,118,211,0.28);color:#c5e0f4}
+.h-tag.violet{background:rgba(111,122,252,0.22);color:#c8ccfb}
+.h-tag.warn{background:rgba(184,134,11,0.22);color:#fde68a}
+
+.h-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.08);margin:14px -18px -16px;padding:0;position:relative;z-index:1}
+.hm{background:rgba(15,27,45,0.55);padding:9px 10px;backdrop-filter:blur(6px)}
+.hm .k{font-size:9px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.hm .v{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600;margin-top:1px;line-height:1.15}
+.hm .v.warn{color:#fde68a}
+.hm .v.ok{color:#a7f3d0}
+.hm .s{font-size:9px;color:rgba(255,255,255,0.7);margin-top:1px}
+
+/* Action bar (sticky under hero) */
+.actbar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line);flex-shrink:0}
+.ab{background:var(--surface);padding:9px 0;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text-mute);font-size:10.5px;font-weight:500}
+.ab.primary{color:var(--primary)}
+.ab .ic{color:inherit}
+
+/* Body sections */
+.body{padding:14px 14px 28px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-sm);overflow:hidden}
+.card-h{padding:11px 14px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-t{font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
+.card-t .ic{color:var(--primary);display:inline-flex;align-items:center}
+.card-l{font-size:11.5px;color:var(--primary);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:3px}
+.card-b{padding:12px 14px}
+
+/* Customer card (matches desktop — violet gradient avatar) */
+.cc{background:var(--primary-soft);border:1px solid var(--primary);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.cc-av{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#6f7afc,#4a5fe8);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-body{flex:1;min-width:0}
+.cc-nm{font-size:13px;font-weight:600}
+.cc-meta{font-size:10.5px;color:var(--text-mute);margin-top:1px}
+.cc-link{font-size:10.5px;color:var(--primary);font-weight:500;margin-left:auto}
+
+/* KV rows */
+.kv{display:grid;grid-template-columns:118px 1fr;gap:5px 12px}
+.kv .k{font-size:11.5px;color:var(--text-mute);font-weight:500}
+.kv .v{font-size:12px;font-weight:500;font-family:'JetBrains Mono',monospace;color:var(--text)}
+.kv .v.p{color:var(--primary)}
+.kv .v.warn{color:var(--warn)}
+
+/* Aging bar (matches desktop) */
+.aging-bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;display:flex;margin:11px 14px 8px;border:1px solid var(--line-soft)}
+.aging-bar .seg{height:100%}
+.aging-bar .s1{background:var(--success)}
+.aging-bar .s2{background:var(--primary)}
+.aging-bar .s3{background:var(--warn)}
+.aging-bar .s4{background:var(--danger)}
+.aging-lbls{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:0 14px 12px}
+.aging-lbls .cell{text-align:center}
+.aging-lbls .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;display:block;line-height:1.1}
+.aging-lbls .l{font-size:9.5px;color:var(--text-mute);margin-top:1px;display:block}
+.aging-lbls .s2{color:var(--primary)}
+.aging-lbls .s3{color:var(--warn)}
+.aging-lbls .s4{color:var(--danger)}
+.ar-foot{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 14px 13px;border-top:1px dashed var(--line-soft);margin:0 14px;padding-top:11px}
+.ar-foot .cell{text-align:center}
+.ar-foot .k{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.ar-foot .v{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:700;margin-top:2px}
+.ar-foot .v.ok{color:var(--success)}
+
+/* Line item row (compact, matches desktop li-row) */
+.li{display:grid;grid-template-columns:1fr 56px 56px 30px;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line-soft);align-items:center}
+.li:last-child{border-bottom:0}
+.li-sku{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-dim);margin-bottom:1px}
+.li-name{font-size:12px;font-weight:500;line-height:1.3}
+.li-desc{font-size:10.5px;color:var(--text-mute);margin-top:1px}
+.li-m{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-align:right}
+.li-m.t{font-weight:600}
+.li-m.warn{color:var(--warn)}
+.li-m.ok{color:var(--success)}
+.li-ic{width:24px;height:24px;border-radius:5px;background:var(--surface-2);color:var(--text-mute);display:inline-flex;align-items:center;justify-content:center}
+
+/* Activity row (matches desktop act-row) */
+.act{display:grid;grid-template-columns:30px 1fr 50px;gap:9px;padding:10px 14px;border-bottom:1px solid var(--line-soft);align-items:flex-start}
+.act:last-child{border-bottom:0}
+.act-ic{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.act-ic.s{background:var(--success-soft);color:var(--success)}
+.act-ic.p{background:var(--primary-soft);color:var(--primary)}
+.act-ic.v{background:var(--violet-soft);color:var(--violet)}
+.act-ic.w{background:var(--warn-soft);color:var(--warn)}
+.act-text{font-size:12px;line-height:1.4}
+.act-text b{font-weight:600}
+.act-meta{color:var(--text-dim);font-size:10.5px;margin-top:1px}
+.act-time{font-size:10px;color:var(--text-dim);text-align:right;font-family:'JetBrains Mono',monospace;margin-top:4px;white-space:nowrap}
+
+/* File row (matches desktop) */
+.fr{display:grid;grid-template-columns:32px 1fr 50px 22px;gap:9px;padding:9px 14px;border-bottom:1px solid var(--line-soft);align-items:center}
+.fr:last-child{border-bottom:0}
+.fr-ic{width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;letter-spacing:0.04em}
+.fr-ic.pdf{background:var(--danger-soft);color:var(--danger)}
+.fr-ic.xls{background:var(--success-soft);color:var(--success)}
+.fr-ic.img{background:var(--violet-soft);color:var(--violet)}
+.fr-ic.doc{background:var(--primary-soft);color:var(--primary)}
+.fr-nm{font-size:12px;font-weight:600;line-height:1.2}
+.fr-meta{font-size:10.5px;color:var(--text-mute);margin-top:1px}
+.fr-sz{font-size:10.5px;color:var(--text-mute);font-family:'JetBrains Mono',monospace;text-align:right}
+
+/* Totals card (mirrors desktop t-card) */
+.totals{background:linear-gradient(135deg,#fafbfd,#f3f5f8);border:1px solid var(--line);border-radius:10px;padding:13px 14px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;font-size:12px}
+.tot .l{color:var(--text-mute)}
+.tot .v{font-family:'JetBrains Mono',monospace;font-weight:500}
+.tot.disc .v{color:var(--success)}
+.tot.warn .v{color:var(--warn)}
+.tot.grand{border-top:2px solid var(--line);padding-top:7px;margin-top:5px;font-size:13.5px;font-weight:700}
+.tot.grand .l{color:var(--text);font-weight:600}
+.tot.grand .v{color:var(--primary);font-size:16px}
+.cv-anno{font-size:10.5px;color:var(--text-dim);margin-top:7px;line-height:1.45;padding:8px 10px;background:var(--surface-2);border-radius:6px}
+.cv-anno b{font-weight:600;color:var(--text)}
+.cv-anno .save{color:var(--success);font-weight:600}
+
+/* Vaadin watermark */
+.vaadin-tag{position:absolute;bottom:12px;right:14px;font-size:10px;color:var(--text-dim);background:var(--surface);border:1px solid var(--line);padding:3px 9px;border-radius:999px;box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;gap:5px;z-index:9}
+.vaadin-tag .vaadin-mark{width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,var(--primary),#4a9be5)}
+.home-bar{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:120px;height:4px;background:#000;border-radius:2px;z-index:50}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="sbar"><span>9:41</span><span class="r">●●●● 5G <svg width="14" height="10" viewBox="0 0 16 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="4" y="6" width="3" height="6" rx="0.5"/><rect x="8" y="3" width="3" height="9" rx="0.5"/><rect x="12" y="0" width="3" height="12" rx="0.5"/></svg> <svg width="20" height="10" viewBox="0 0 22 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="2" width="18" height="8" rx="2"/><rect x="3" y="4" width="12" height="4" rx="1" fill="currentColor"/><rect x="20" y="5" width="1.5" height="2" fill="currentColor" stroke="none"/></svg></span></div>
+
+  <div class="ubar">
+    <button class="back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="ubar-t">
+      <div class="crumb">CRM › Customers › C-2026-0023</div>
+      <div class="nm">Helix Robotics SE</div>
+    </div>
+    <button class="ubar-btn" title="Share"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
+    <button class="ubar-btn" title="More"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+  </div>
+
+  <div class="scroll">
+    <div class="hero">
+      <div class="h-row">
+        <div class="h-thumb">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M3 9h18"/></svg>
+          <div class="ribbon">T1</div>
+        </div>
+        <div class="h-body">
+          <div class="h-name">Helix Robotics SE <span class="star">★</span></div>
+          <div class="h-meta">C-2026-0023 · Munich · since 1.9 yr</div>
+        </div>
+      </div>
+      <div class="h-tags">
+        <span class="h-tag ok">● Active</span>
+        <span class="h-tag pri">★ T1</span>
+        <span class="h-tag prim">EMEA · DACH</span>
+        <span class="h-tag violet">VIP</span>
+        <span class="h-tag warn">⚠ 14d AR</span>
+      </div>
+      <div class="h-metrics">
+        <div class="hm"><div class="k">Health</div><div class="v ok">A+</div><div class="s">★ 4.7</div></div>
+        <div class="hm"><div class="k">Open AR</div><div class="v warn">€14.8K</div><div class="s">14d</div></div>
+        <div class="hm"><div class="k">Open SOs</div><div class="v">3</div><div class="s">€48.2K</div></div>
+        <div class="hm"><div class="k">ARR</div><div class="v">€1.84M</div><div class="s">+12%</div></div>
+      </div>
+    </div>
+
+    <!-- Action bar — context-aware (overdue → call/email/dunning/more) -->
+    <div class="actbar">
+      <div class="ab primary"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>Call</div>
+      <div class="ab primary"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>Email</div>
+      <div class="ab primary"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 19.79 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>WhatsApp</div>
+      <div class="ab"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></span>More</div>
+    </div>
+
+    <div class="body">
+
+      <!-- Account & terms — read-only, key fields -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M3 9h18"/></svg></span>Account &amp; terms</div><span class="card-l">Edit</span></div>
+        <div class="card-b">
+          <div class="cc" style="margin-bottom:10px">
+            <span class="cc-av">HR</span>
+            <div class="cc-body">
+              <div class="cc-nm">Helix Robotics SE</div>
+              <div class="cc-meta">DE 284 720 91 · Landsberger Str. 410</div>
+            </div>
+            <span class="cc-link">View 360 →</span>
+          </div>
+          <div class="kv">
+            <div class="k">Tier</div><div class="v p">★ T1 Strategic</div>
+            <div class="k">Region</div><div class="v">EMEA · DACH</div>
+            <div class="k">Industry</div><div class="v">Industrial robotics</div>
+            <div class="k">Payment terms</div><div class="v">Net 30</div>
+            <div class="k">SEPA mandate</div><div class="v p">DE28472091</div>
+            <div class="k">Owner</div><div class="v">Elena Lindqvist</div>
+            <div class="k">Source</div><div class="v">Inbound · referral</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AR aging — mirrors desktop -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>AR aging</div><span class="card-l">€14.8K total</span></div>
+        <div class="aging-bar">
+          <div class="seg s1" style="flex:0.62"></div>
+          <div class="seg s2" style="flex:0.18"></div>
+          <div class="seg s3" style="flex:0.20"></div>
+          <div class="seg s4" style="flex:0"></div>
+        </div>
+        <div class="aging-lbls">
+          <div class="cell"><span class="v">€8.4K</span><span class="l">Current</span></div>
+          <div class="cell"><span class="v s2">€2.4K</span><span class="l">1-30d</span></div>
+          <div class="cell"><span class="v s3">€2.7K</span><span class="l">31-60d</span></div>
+          <div class="cell"><span class="v s4">€0</span><span class="l">90+d</span></div>
+        </div>
+        <div class="ar-foot">
+          <div class="cell"><div class="k">DSO</div><div class="v">34d</div></div>
+          <div class="cell"><div class="k">Collection</div><div class="v ok">96.2%</div></div>
+          <div class="cell"><div class="k">Next DD</div><div class="v">13 Aug</div></div>
+        </div>
+      </div>
+
+      <!-- Active contacts — compact 2-col -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Active contacts <span style="font-weight:500;color:var(--text-mute);font-size:11.5px">· 3 of 8</span></div><span class="card-l">All 8 →</span></div>
+        <div>
+          <div class="act" style="grid-template-columns:30px 1fr"><span class="act-ic s" style="background:linear-gradient(135deg,#ec6f9e,#c0392b);color:#fff;font-size:10.5px;font-weight:700">AP</span><div><div class="act-text"><b>Aisha Patel</b> · VP Operations<div class="act-meta">a.patel@helix.de · ⭐ VIP · Decision maker</div></div></div></div>
+          <div class="act" style="grid-template-columns:30px 1fr"><span class="act-ic s" style="background:linear-gradient(135deg,#6f7afc,#4a5fe8);color:#fff;font-size:10.5px;font-weight:700">RP</span><div><div class="act-text"><b>Rolf Petersen</b> · Owner<div class="act-meta">r.petersen@helix.de · ⭐ VIP · Exec sponsor</div></div></div></div>
+          <div class="act" style="grid-template-columns:30px 1fr"><span class="act-ic s" style="background:linear-gradient(135deg,#0d9488,#0a7268);color:#fff;font-size:10.5px;font-weight:700">MK</span><div><div class="act-text"><b>Michael Köhler</b> · Procurement<div class="act-meta">m.koehler@helix.de</div></div></div></div>
+        </div>
+      </div>
+
+      <!-- Open orders — compact li rows -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>Open orders <span style="font-weight:500;color:var(--text-mute);font-size:11.5px">· 3</span></div><span class="card-l">All 14 →</span></div>
+        <div>
+          <div class="li">
+            <div><div class="li-sku">SO-2026-0312</div><div class="li-name">HMI-22 main + accessories</div><div class="li-desc">8 lines · 1 short OLED-7-100K</div></div>
+            <div class="li-m warn">7/8</div>
+            <div class="li-m t">€38,200</div>
+            <div class="li-ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="li">
+            <div><div class="li-sku">SO-2026-0288</div><div class="li-name">Spare-parts Q2 replenishment</div><div class="li-desc">3 lines · scheduled 22 Jul</div></div>
+            <div class="li-m ok">3/3</div>
+            <div class="li-m t">€8,400</div>
+            <div class="li-ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="li">
+            <div><div class="li-sku">SO-2026-0241</div><div class="li-name">Service kit 24-month</div><div class="li-desc">1 line · awaiting allocation</div></div>
+            <div class="li-m warn">0/1</div>
+            <div class="li-m t">€1,800</div>
+            <div class="li-ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Open invoices -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>Open invoices <span style="font-weight:500;color:var(--text-mute);font-size:11.5px">· 1 overdue</span></div><span class="card-l">All 12 →</span></div>
+        <div>
+          <div class="li" style="background:var(--warn-soft)">
+            <div><div class="li-sku">INV-2026-0421</div><div class="li-name">HMI-22 invoice (partial)</div><div class="li-desc">Issued 14 Jul · due 28 Jul</div></div>
+            <div class="li-m warn" style="font-size:10px">⚠ 14d</div>
+            <div class="li-m t warn">€14,810</div>
+            <div class="li-ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>Activity</div><span class="card-l">All 42 →</span></div>
+        <div>
+          <div class="act"><span class="act-ic s"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><div><div class="act-text"><b>SEPA DD scheduled</b> · €14,810<div class="act-meta">auto-pay · 13 Aug 14:00</div></div></div><div class="act-time">2h</div></div>
+          <div class="act"><span class="act-ic p"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/></svg></span><div><div class="act-text"><b>SO-2026-0312</b> shipped partial<div class="act-meta">7/8 lines · OLED-7 short</div></div></div><div class="act-time">1d</div></div>
+          <div class="act"><span class="act-ic w"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span><div><div class="act-text"><b>Dunning +7</b> sent to AP<div class="act-meta">INV-2026-0421</div></div></div><div class="act-time">4 Aug</div></div>
+          <div class="act"><span class="act-ic v"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><div><div class="act-text"><b>DocuSign signed</b> · Q-2026-0098</div></div><div class="act-time">12 Jul</div></div>
+          <div class="act"><span class="act-ic s"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><div><div class="act-text"><b>PO-2026-0188</b> awarded PrahaTech</div></div><div class="act-time">5 Jul</div></div>
+        </div>
+      </div>
+
+      <!-- Files -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span>Files <span style="font-weight:500;color:var(--text-mute);font-size:11.5px">· 6</span></div><span class="card-l">+ Upload</span></div>
+        <div>
+          <div class="fr"><div class="fr-ic pdf">PDF</div><div><div class="fr-nm">Master agreement 2026</div><div class="fr-meta">signed · 5 Jul</div></div><div class="fr-sz">412 KB</div></div>
+          <div class="fr"><div class="fr-ic xls">XLS</div><div><div class="fr-nm">Q3 forecast vs actuals</div><div class="fr-meta">Elena · 1 Jul</div></div><div class="fr-sz">186 KB</div></div>
+          <div class="fr"><div class="fr-ic pdf">PDF</div><div><div class="fr-nm">Q-2026-0098 signed</div><div class="fr-meta">DocuSign · 12 Jul</div></div><div class="fr-sz">280 KB</div></div>
+          <div class="fr"><div class="fr-ic img">IMG</div><div><div class="fr-nm">Helix DC Augsburg photos</div><div class="fr-meta">22 May</div></div><div class="fr-sz">3.4 MB</div></div>
+        </div>
+      </div>
+
+      <!-- Account 360 summary — totals card with 3-yr annotation -->
+      <div class="card">
+        <div class="card-h"><div class="card-t"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Account 360 · YTD</div><span class="card-l">Full report →</span></div>
+        <div class="card-b">
+          <div class="totals">
+            <div class="tot"><span class="l">Revenue YTD</span><span class="v">€1,420,400</span></div>
+            <div class="tot disc"><span class="l">Volume discount (3-yr)</span><span class="v">−€142,040</span></div>
+            <div class="tot"><span class="l">Net revenue YTD</span><span class="v">€1,278,360</span></div>
+            <div class="tot"><span class="l">Recurring annual fee</span><span class="v" style="color:var(--text-mute)">+ €24,000/yr</span></div>
+            <div class="tot warn"><span class="l">Open AR (4 invoices)</span><span class="v">€14,810</span></div>
+            <div class="tot grand"><span class="l">YTD total</span><span class="v">€1,293,170</span></div>
+          </div>
+          <div class="cv-anno">3-year contract value: <b>€3.84M</b> · <span class="save">€412,000 saved</span> with commit</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="vaadin-tag"><span class="vaadin-mark"></span>Mock-up · Vaadin Flow · Mobile</div>
+  <div class="home-bar"></div>
+</div>
+</body>
+</html>

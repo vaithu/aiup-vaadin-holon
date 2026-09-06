@@ -1,0 +1,57 @@
+name: CodeQL
+
+# Deeper SAST for the Java demo module (demo/crm-minimal) using GitHub CodeQL —
+# the SonarQube-equivalent "Security Vulnerability / Hotspot" analysis. Results land
+# in the repository's Code Scanning tab alongside the SpotBugs/FindSecBugs SARIF
+# uploaded by java-quality.yml.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "demo/crm-minimal/**"
+      - ".github/workflows/codeql.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "demo/crm-minimal/**"
+      - ".github/workflows/codeql.yml"
+  schedule:
+    # Weekly full scan so newly-published CodeQL queries catch latent issues.
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: CodeQL (java)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+          queries: security-and-quality
+
+      # Compile the demo so CodeQL can build its database. Skip tests and the Vaadin
+      # frontend prepare step — CodeQL only needs the compiled Java classes.
+      - name: Build demo (compile only)
+        run: mvn -B -f demo/crm-minimal/pom.xml -DskipTests -Dvaadin.skip=true clean compile
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java"

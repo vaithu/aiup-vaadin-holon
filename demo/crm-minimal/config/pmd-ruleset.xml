@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="crm-minimal PMD ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Basic "quickstart" PMD ruleset for crm-minimal (Holon Platform + Vaadin Flow). Pulls in
+        PMD's standard best-practices/error-prone/design/performance categories, then relaxes a
+        few rules that produce heavy noise against Holon's builder-style fluent APIs
+        (EntityFormPanel, MasterDetailBuilder, Components.listing(...), etc.) and Vaadin's
+        component-tree construction idioms. Runs in report mode (pmd.failOnViolation=false); CPD
+        (copy-paste detection) is wired via the same plugin's cpd goal, not a separate ruleset.
+    </description>
+
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Holon/Vaadin builder chains routinely return the same fluent instance without
+             assigning it to a local first; not a real defect in this codebase. -->
+        <exclude name="UnusedLocalVariable"/>
+    </rule>
+
+    <rule ref="category/java/errorprone.xml">
+        <!-- Bean-style domain classes (Customer, Contact, TaxCode) intentionally expose plain
+             mutable setters for Holon's BeanPropertySet reflection; not a real defect. -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+    </rule>
+
+    <rule ref="category/java/design.xml">
+        <!-- View classes (NewCustomerView, CustomerMasterDetailView) legitimately wire many
+             collaborators (services) plus build a deep Vaadin component tree in one method;
+             excluded rather than tuned per-class to keep this ruleset generic. -->
+        <exclude name="TooManyMethods"/>
+        <exclude name="ExcessiveImports"/>
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="NcssCount"/>
+    </rule>
+
+    <rule ref="category/java/performance.xml"/>
+
+</ruleset>

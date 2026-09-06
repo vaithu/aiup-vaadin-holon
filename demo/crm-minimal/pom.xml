@@ -37,6 +37,20 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.holon-platform.vaadin</groupId>
+                <artifactId>holon-vaadin-flow-bom</artifactId>
+                <version>12.0.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.vaadin</groupId>
+                <artifactId>vaadin-bom</artifactId>
+                <version>25.2.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -45,10 +59,34 @@
         <!--  All-in-one SaaS starter (pulls every module)  -->
         <dependency>
             <groupId>com.holon-platform.multi-tenancy</groupId>
-            <artifactId>holon-starter-vaadin-flow-multi-tenancy</artifactId>
+            <artifactId>holon-starter-multi-tenancy</artifactId>
         </dependency>
 
-        
+        <dependency>
+            <groupId>com.holon-platform.vaadin</groupId>
+            <artifactId>holon-starter-vaadin-flow</artifactId>
+        </dependency>
+
+        <!--  Holon: JPA (Hibernate) starter  the multi-tenancy starter wires a tenant-aware
+              DataSource but does not itself expose a Holon Datastore bean; CustomerService/
+              ContactService/TaxCodeService (BeanDatastoreHelper-backed) need one. Requires
+              @Entity-annotated JPA entities on the classpath (JPA Datastore reads/writes through
+              the persistence unit rather than plain SQL).  -->
+        <dependency>
+            <groupId>com.holon-platform.jpa</groupId>
+            <artifactId>holon-starter-jpa-hibernate</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
 
         <!--  Spring Boot web (embedded Tomcat, DispatcherServlet)  -->
         <dependency>
@@ -56,15 +94,30 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!--  JPA + H2 (replaces all in-memory service implementations)  -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
+        <!--  H2 (replaces all in-memory service implementations); persistence is now driven by
+              Holon's JPA Datastore (holon-starter-jpa-hibernate above, which pulls in
+              spring-boot-starter-data-jpa/Hibernate transitively), so CustomerService/ContactService/
+              TaxCodeService entities must be @Entity-annotated JavaBeans mapped to this schema.  -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!--  Flyway  applies src/main/resources/db/migration (and, on the test classpath,
+              src/test/resources/db/migration test-seed scripts) against the H2 datasource.
+              Spring Boot 4's autoconfigure modularization moved FlywayAutoConfiguration out of
+              spring-boot-autoconfigure into its own standalone module; without this explicit
+              dependency, flyway-core sits on the classpath but nothing ever triggers a migration
+              (confirmed via `debug=true` condition-evaluation report: FlywayAutoConfiguration
+              never even appears as a candidate without this module present).  -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
         </dependency>
 
         <!--  AOP (enables @RateLimit and @Audited aspects)  -->
@@ -94,6 +147,20 @@
             <artifactId>vaadin-dev</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- P6Spy — SQL logging proxy (raw library, no Spring Boot starter needed) -->
+        <dependency>
+            <groupId>p6spy</groupId>
+            <artifactId>p6spy</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+
 
     </dependencies>
 
@@ -125,7 +192,7 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <!-- Explicit main class so the plugin never has to guess. -->
-                    <mainClass>com.holonplatform.multitenancy.demo.DemoApplication</mainClass>
+                    <mainClass>com.example.crm.CrmApplication</mainClass>
                 </configuration>
                 <executions>
                     <!--
@@ -161,5 +228,207 @@
 
         </plugins>
     </build>
+
+    <!--
+        SonarQube-equivalent quality gate (see ../../aiup-vaadin-holon/rules/quality-gate.md).
+        This module IS the reference implementation that rule doc points to, so this profile
+        was authored from scratch (no other config/ rulesets existed anywhere in the monorepo
+        to copy from). Bound to `verify`; opt-in via `-Pquality` so a plain `mvn package`/`mvn
+        test` stays fast. Every plugin below runs in REPORT mode (non-failing) by default -
+        see the properties block for the exact toggles that flip each one into a hard gate.
+    -->
+    <profiles>
+        <profile>
+            <id>quality</id>
+            <properties>
+                <!-- Report-mode (non-failing) defaults - see quality-gate.md's toggle table. -->
+                <spotbugs.failOnError>false</spotbugs.failOnError>
+                <pmd.failOnViolation>false</pmd.failOnViolation>
+                <checkstyle.failOnViolation>false</checkstyle.failOnViolation>
+                <jacoco.haltOnFailure>false</jacoco.haltOnFailure>
+                <jacoco.line.minimum>0.00</jacoco.line.minimum>
+                <!-- 11 is above the CVSS v3 max of 10.0, so this effectively never fails the build. -->
+                <dependency.check.failBuildOnCVSS>11</dependency.check.failBuildOnCVSS>
+            </properties>
+            <build>
+                <plugins>
+
+                    <!-- SpotBugs + FindSecBugs: bugs / correctness + security vulnerabilities (SAST). -->
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>4.9.6.0</version>
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Medium</threshold>
+                            <failOnError>${spotbugs.failOnError}</failOnError>
+                            <excludeFilterFile>config/spotbugs-exclude.xml</excludeFilterFile>
+                            <!-- Produces target/spotbugsSarif.json alongside the default
+                                 target/spotbugsXml.xml + target/spotbugs.html reports (the plugin
+                                 does not use a generic <formats> list; SARIF output is its own
+                                 dedicated switch). -->
+                            <sarifOutput>true</sarifOutput>
+                            <htmlOutput>true</htmlOutput>
+                            <!-- Default outputDirectory is target/site; override so the HTML
+                                 report lands directly under target/ (spotbugs.html), matching the
+                                 java-quality.yml artifact glob target/spotbugs*.html. -->
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <plugins>
+                                <plugin>
+                                    <groupId>com.h3xstream.findsecbugs</groupId>
+                                    <artifactId>findsecbugs-plugin</artifactId>
+                                    <version>1.13.0</version>
+                                </plugin>
+                            </plugins>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>spotbugs-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- PMD + CPD: code smells / conventions + duplicated-code detection. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-pmd-plugin</artifactId>
+                        <version>3.27.0</version>
+                        <configuration>
+                            <rulesets>
+                                <ruleset>config/pmd-ruleset.xml</ruleset>
+                            </rulesets>
+                            <failOnViolation>${pmd.failOnViolation}</failOnViolation>
+                            <printFailingErrors>true</printFailingErrors>
+                            <linkXRef>false</linkXRef>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>pmd-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>pmd</goal>
+                                    <goal>cpd</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Checkstyle: code smells / conventions. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>3.6.0</version>
+                        <configuration>
+                            <configLocation>config/checkstyle.xml</configLocation>
+                            <failOnViolation>${checkstyle.failOnViolation}</failOnViolation>
+                            <violationSeverity>warning</violationSeverity>
+                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                            <consoleOutput>true</consoleOutput>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>checkstyle-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- JaCoCo: test coverage (report + threshold check, non-failing by default). -->
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.13</version>
+                        <executions>
+                            <execution>
+                                <id>jacoco-prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jacoco-report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jacoco-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <haltOnFailure>${jacoco.haltOnFailure}</haltOnFailure>
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>${jacoco.line.minimum}</minimum>
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- OWASP Dependency-Check: vulnerable-dependency (CVE) scanning. -->
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <version>12.1.3</version>
+                        <configuration>
+                            <failBuildOnCVSS>${dependency.check.failBuildOnCVSS}</failBuildOnCVSS>
+                            <formats>
+                                <format>HTML</format>
+                                <format>XML</format>
+                                <format>SARIF</format>
+                            </formats>
+                            <!--
+                                DEVIATION (see task report): this sandboxed execution environment
+                                cannot complete the OWASP NVD API handshake (SSLHandshakeException
+                                / PKIX path building failed - no outbound trust to
+                                services.nvd.nist.gov from here), so dependency-check-maven cannot
+                                build/update its local CVE database and the `check` goal fails
+                                with a "NoDataException: No documents exist" before
+                                failBuildOnCVSS is ever evaluated - this is a genuine environment
+                                network restriction, not a pom misconfiguration. autoUpdate stays
+                                at its default (true) so a normal (non-sandboxed) run, e.g. in the
+                                java-quality.yml CI workflow which does have outbound internet
+                                access, refreshes the CVE database and produces real findings.
+                            -->
+                            <!-- Analyzers requiring outbound network calls are opt-in; disabled here
+                                 so the gate stays usable offline / behind a locked-down proxy. -->
+                            <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>
+                            <retireJsAnalyzerEnabled>false</retireJsAnalyzerEnabled>
+                            <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>dependency-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
