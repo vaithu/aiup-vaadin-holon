@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RestoPro — POS Mockup</title>
+  <style>
+    :root { --nav:#102536; --primary:#0d6efd; --surface:#fff; --bg:#f4f7fa; --text:#17202a; --muted:#6b7785; --border:#dce3ea; --success:#19a463; --warning:#e7a11a; --danger:#df3b3b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    .shell { min-height:100vh; display:grid; grid-template-columns:210px 1fr; grid-template-rows:58px 1fr; }
+    .nav { grid-row:1/3; background:var(--nav); color:#fff; padding:14px 10px; }
+    .brand { font-weight:800; font-size:20px; padding:8px 12px 18px; }
+    .brand span { color:#f39a20; }
+    .nav a { display:block; padding:11px 12px; margin:3px 0; border-radius:7px; color:#dce6ee; text-decoration:none; font-size:14px; }
+    .nav a.active { background:#0d6efd; color:#fff; }
+    .top { background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 20px; }
+    .top .outlet { font-weight:650; }
+    .top .user { color:var(--muted); }
+    main { padding:18px; min-width:0; }
+    .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:14px; }
+    input { flex:1; padding:11px 13px; border:1px solid var(--border); border-radius:7px; background:#fff; }
+    .workspace { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:16px; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 2px 8px #13263a0d; }
+    .panel-head { padding:14px 16px; border-bottom:1px solid var(--border); font-weight:700; display:flex; justify-content:space-between; }
+    .tabs { display:flex; gap:7px; padding:12px 14px; overflow:auto; }
+    .tab { border:0; background:#eef3f8; border-radius:16px; padding:7px 12px; white-space:nowrap; }
+    .tab.active { background:#0d6efd; color:#fff; }
+    .items { padding:0 14px 14px; display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)); gap:12px; }
+    .item { border:1px solid var(--border); border-radius:9px; overflow:hidden; cursor:pointer; background:#fff; }
+    .item .pic { height:90px; background:linear-gradient(135deg,#d7b58a,#8f5d37); }
+    .item:nth-child(2) .pic { background:linear-gradient(135deg,#f3d58c,#c68138); }
+    .item:nth-child(3) .pic { background:linear-gradient(135deg,#f0c6a5,#c05b32); }
+    .item:nth-child(4) .pic { background:linear-gradient(135deg,#e8c36d,#8b5427); }
+    .item-body { padding:9px; }
+    .item-name { font-weight:650; font-size:13px; }
+    .price { color:#4f5d69; margin-top:4px; font-size:13px; }
+    .order { display:flex; flex-direction:column; min-height:570px; }
+    .order-body { padding:14px; flex:1; }
+    .order-meta { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { padding:9px 4px; border-bottom:1px solid #edf0f3; text-align:left; }
+    th:last-child,td:last-child { text-align:right; }
+    .totals { margin-top:14px; }
+    .row { display:flex; justify-content:space-between; padding:5px 0; font-size:13px; }
+    .total { border-top:1px solid var(--border); margin-top:7px; padding-top:10px; font-size:17px; font-weight:800; }
+    .actions { display:flex; gap:8px; padding:14px; border-top:1px solid var(--border); }
+    button { border:0; border-radius:7px; padding:10px 14px; cursor:pointer; font-weight:650; }
+    .secondary { background:#eef2f6; color:#23313d; }
+    .primary { background:#0d6efd; color:#fff; flex:1; }
+    @media(max-width:900px) { .shell{grid-template-columns:72px 1fr;} .brand{font-size:0;} .brand span{display:none;} .nav a{font-size:0;text-align:center;} .workspace{grid-template-columns:1fr;} .order{min-height:auto;} .items{grid-template-columns:repeat(2,minmax(120px,1fr));} }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="nav">
+    <div class="brand">Resto<span>Pro</span></div>
+    <a>⌂ Dashboard</a><a class="active">▣ POS</a><a>▤ Orders</a><a>▦ Tables</a><a>♨ Kitchen</a><a>☷ Menu</a><a>◫ Inventory</a><a>▱ Purchase</a><a>♙ Customers</a><a>▥ Reports</a><a>⚙ Settings</a>
+  </aside>
+  <header class="top"><div class="outlet">☰ &nbsp; The Spice Corner &nbsp; ▾</div><div class="user">🔔 &nbsp; Cashier ▾</div></header>
+  <main>
+    <div class="toolbar"><input placeholder="Search for items... (Ctrl+K)"></div>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head">Menu</div>
+        <div class="tabs"><button class="tab active">All</button><button class="tab">South Indian</button><button class="tab">Chinese</button><button class="tab">Tandoor</button><button class="tab">Beverages</button></div>
+        <div class="items">
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Masala Dosa</div><div class="price">₹80</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Idli (2 pcs)</div><div class="price">₹60</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Vada (2 pcs)</div><div class="price">₹50</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Pongal</div><div class="price">₹70</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Chicken Biryani</div><div class="price">₹220</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Paneer Butter Masala</div><div class="price">₹180</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Veg Fried Rice</div><div class="price">₹150</div></div></article>
+          <article class="item"><div class="pic"></div><div class="item-body"><div class="item-name">Dal Tadka</div><div class="price">₹120</div></div></article>
+        </div>
+      </div>
+      <aside class="panel order">
+        <div class="panel-head"><span>Current Order</span><span style="color:var(--danger);font-size:12px">Clear</span></div>
+        <div class="order-body">
+          <div class="order-meta"><strong>Dine-in · T5</strong><span>Order #101</span></div>
+          <table><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>
+            <tr><td>Masala Dosa</td><td>1</td><td>₹80</td></tr>
+            <tr><td>Chicken Biryani</td><td>2</td><td>₹440</td></tr>
+            <tr><td>Butter Naan</td><td>2</td><td>₹100</td></tr>
+            <tr><td>Filter Coffee</td><td>2</td><td>₹80</td></tr>
+          </tbody></table>
+          <div class="totals"><div class="row"><span>Subtotal</span><span>₹700</span></div><div class="row"><span>CGST (2.5%)</span><span>₹17.50</span></div><div class="row"><span>SGST (2.5%)</span><span>₹17.50</span></div><div class="row total"><span>Total</span><span>₹735</span></div></div>
+        </div>
+        <div class="actions"><button class="secondary">Save</button><button class="primary">Generate Bill</button></div>
+      </aside>
+    </section>
+  </main>
+</div>
+</body>
+</html>
