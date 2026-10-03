@@ -122,7 +122,7 @@ Implement an `ErrorHandler` view for 404 (route not found) and uncaught exceptio
 package com.example.ap.shared;
 
 import com.holonplatform.vaadin.flow.navigator.Navigator;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Layout;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -184,7 +184,7 @@ public class InternalErrorView extends Layout implements HasErrorParameter<Excep
 package com.example.ap.shared;
 
 import com.holonplatform.vaadin.flow.navigator.Navigator;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Layout;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.router.Route;

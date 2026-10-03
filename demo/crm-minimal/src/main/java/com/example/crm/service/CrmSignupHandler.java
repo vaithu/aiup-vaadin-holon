@@ -36,4 +36,27 @@ public class CrmSignupHandler {
 
         return signupService.signup(request);
     }
+
+    /**
+     * Simplified signup for the Holon SignUpPage flow: provisions a tenant from just the
+     * person's name, email and password, using sensible defaults for branding/regional/industry.
+     */
+    public TenantDetails signupBasic(String firstName, String lastName, String ownerEmail, String rawPassword) {
+        return completeWizard(
+                defaultWorkspaceName(firstName, lastName, ownerEmail), ownerEmail, rawPassword,
+                null, null, null,               // branding defaults
+                "en-US", "UTC", "USD",          // regional defaults
+                null);                           // industry
+    }
+
+    private static String defaultWorkspaceName(String firstName, String lastName, String ownerEmail) {
+        String fullName = ((firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName)).trim();
+        if (!fullName.isBlank()) {
+            return fullName + "'s workspace";
+        }
+        if (ownerEmail != null && ownerEmail.contains("@")) {
+            return ownerEmail.substring(0, ownerEmail.indexOf('@')) + "'s workspace";
+        }
+        return "My workspace";
+    }
 }

@@ -126,7 +126,7 @@ For Spring Boot Maven plugin:
     <dependency>
       <groupId>com.holon-platform.vaadin</groupId>
       <artifactId>holon-vaadin-flow-bom</artifactId>
-      <version>10.0.1</version>
+      <version>12.0.1</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -134,7 +134,7 @@ For Spring Boot Maven plugin:
     <dependency>
       <groupId>com.vaadin</groupId>
       <artifactId>vaadin-bom</artifactId>
-      <version>25.2.1</version>
+      <version>25.3.0</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -142,7 +142,7 @@ For Spring Boot Maven plugin:
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-dependencies</artifactId>
-      <version>4.1.0</version>
+      <version>4.1.1</version>
       <type>pom</type>
       <scope>import</scope>
     </dependency>
@@ -166,14 +166,14 @@ For Spring Boot Maven plugin:
   <dependency>
     <groupId>com.holon-platform.jpa</groupId>
     <artifactId>holon-datastore-jpa-spring-boot</artifactId>
-    <version>10.0.0</version>
+    <version>12.0.0</version>
   </dependency>
 
   <!-- Holon Auth -->
   <dependency>
     <groupId>com.holon-platform.core</groupId>
     <artifactId>holon-auth</artifactId>
-    <version>10.0.0</version>
+    <version>12.0.0</version>
   </dependency>
 
   <!-- PostgreSQL driver -->

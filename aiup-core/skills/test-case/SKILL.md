@@ -61,6 +61,8 @@ Use [references/test-case.md](references/test-case.md) as the document structure
 - **Preconditions must be satisfiable before the test runs** — reference the seeded test data that provides them (e.g. a Flyway test migration) so the automation knows where they come from.
 - **Validation lists cross-cutting end-state checks** — numbered, each with a bold name, each observable through the UI after the flow completes (final status, record counts, state visible on another view).
 - **Postconditions inventory the data the journey leaves behind** — the automated test derives its cleanup from this list. Name every record the flow creates or changes (with its literal test data values) and any deletion-order constraint from business rules (dependent records before their parents). Seeded data stays untouched — don't list it as something to remove.
+- **Name the process path when the project has BPMN models.** If `docs/processes/*.bpmn` exists, add the `**Process:**` line to the Overview naming the model and the path walked through it, and write one test case per distinct path — each gateway answer that changes the sequence of use cases is its own `TC`. Give every gateway decision a precondition that forces the branch.
+- **The Flow table's `UC-NNN` links are a machine-checked contract.** The set of use cases linked there must equal the `useCases` of the journey test's `@TestCase` annotation, in both directions — see the template's Reference section.
 - **No implementation details.** The same step-writing guidelines as use case specs apply (see the template's Reference section): describe what the user and system do, never handlers, SQL, or protocol terms.
 
 ## Workflow
@@ -76,6 +78,7 @@ Use [references/test-case.md](references/test-case.md) as the document structure
 
 - [ ] The file is named `TC-XXX-<kebab-case-name>.md`, lives in `docs/test_cases/`, and documents exactly one journey.
 - [ ] Overview has the `TC-XXX` ID, a one-sentence Goal naming the outcome, and valid Priority and Status values.
+- [ ] Where `docs/processes/*.bpmn` exists, the `**Process:**` line names the model and the exact path walked, and every gateway decision on that path has a precondition forcing it.
 - [ ] Every role that acts in the Flow is listed under Roles.
 - [ ] Every precondition names the data it needs and where it is seeded.
 - [ ] The Flow table has the columns `Step | Name | Description | Test Data | Use Case`, steps numbered from 1 without gaps.

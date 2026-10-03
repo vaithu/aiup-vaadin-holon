@@ -18,7 +18,7 @@ identified in a mockup. If no Holon equivalent exists, **stop immediately and as
 | App shell / main layout | `Components.appShell().navbarBrand("...").nav(nav).build()` → `AppShellLayout` | |
 | Side nav | `SideNavBuilder.create().withNavItem("Label", View.class, VaadinIcon.X.create()).add().buildWrapper()` | |
 | Responsive viewport slots (mobile/desktop) | Prefer `ResponsiveDiv.configure(this).slotOnce(ViewMode.DESKTOP, ()->...).build()` for simpler cases; use CSS `@media` in `styles.css` for complex responsive behaviour | See `css-extraction.md` §"Responsive breakpoints with `@media`" |
-| Breadcrumb | `BreadcrumbItem` / `BreadcrumbPage` (from `com.holonplatform.vaadin.flow.vaadinplus.components`) | |
+| Breadcrumb | `BreadcrumbItem` / `BreadcrumbPage` (from `com.iyensoft.vaadin.flow.components`) | |
 | Tab bar (bare selector) | `TabsBuilder.create().withTab("A","B","C").build()` — produces a bare `Tabs` selector; wire content via `addSelectedChangeListener` | See `TabsDemoView`; use `LazyTabsBuilder` for built-in lazy switching |
 | Tab bar with counter badges | `TabsBuilder.create().withTab("Inbox", 12).withTab("Drafts", 3).build()` | `withTab(label, count)` appends a numeric badge |
 | Tab bar with icons | `TabsBuilder.create().withTab(new Tab(VaadinIcon.HOME.create(), new Span("Home"))).build()` | Pass `Tab` instances for icon+label |
@@ -38,7 +38,7 @@ identified in a mockup. If no Holon equivalent exists, **stop immediately and as
 | Paginated list | Same `Components.listing(T.class)` with `.pageSizes(...)` and `.defaultPageSize(...)` |
 | Read-only detail | `EntityFormPanel.bean(T.class)...readOnly().build()` + `form.setBean(bean)` |
 | Master-detail split | `MasterDetailLayout<T>` from `com.iyensoft.vaadin.flow.components` — see `MasterDetailDemoV2` |
-| Timeline / activity feed / audit log | `TimelineStepper` from `com.holonplatform.vaadin.flow.vaadinplus.components` — see `TimelineStepperDemoView`. Live prepend: `timeline.prependEntries(List.of(new AuditEntry(...).severity(Severity.SUCCESS)))` |
+| Timeline / activity feed / audit log | `TimelineStepper` from `com.iyensoft.vaadin.flow.components` — see `TimelineStepperDemoView`. Live prepend: `timeline.prependEntries(List.of(new AuditEntry(...).severity(Severity.SUCCESS)))` |
 | Calendar / scheduler | `VaadinCalendar` from `com.holonplatform.vaadin.flow.calendar`. Usage: `new VaadinCalendar()`, `cal.setView(CalendarView.MONTH/WEEK/DAY/AGENDA)`, add events via `cal.addCalendarReadyListener(e -> cal.setEvents(events))`. Read-only: `cal.setReadOnly(true)`. Dark: `cal.setTheme(CalendarTheme.DARK)`. Events: `new CalendarEvent.Builder().title("...").start(ldt).end(ldt).color("#hex").build()` |
 | Kanban board | `KanbanBoard.<T,C>builder().withColumns(...).withItemIdentifierProvider(...).withItemColumnProvider(...).withItemColumnUpdater(...).withCardRenderer(...).withMoveHandler(...).withItems(items).build()` — see `KanbanBoardDemoView` |
 | Chart / graph | `ChartJs.builder().type(ChartType.BAR).categories(...).series(...).height("300px").build()` — from `com.holonplatform.vaadin.flow.components.chartjs`. Supports BAR, LINE, PIE, DOUGHNUT, POLAR_AREA, RADAR, BUBBLE, SCATTER. See `ChartJsDemoView` |
@@ -79,7 +79,7 @@ identified in a mockup. If no Holon equivalent exists, **stop immediately and as
 | Lookup FK filter (single-select) | `Long` | `FilterInput.from(Input.singleSelect(Long.class).items(svc.findAll(), E::getId, E::getName).build(), v -> Optional.of(PROPERTY_ID.eq(v)))` |
 | Auto-inferred filter from property type | any | `FilterInput.of(PROPERTY)` — infers type automatically |
 | Custom filter wrapping any Input | any | `FilterInput.from(Input.string().build(), value -> Optional.of(PROP.startsWith(value)))` |
-| Advanced multi-field dynamic search panel | bean | `DynamicFilterPanel.of(MyBean.class)` from `com.holonplatform.vaadin.flow.vaadinplus.components` — see `FilterPanelDemoView` |
+| Advanced multi-field dynamic search panel | bean | `DynamicFilterPanel.of(MyBean.class)` from `com.iyensoft.vaadin.flow.components` — see `FilterPanelDemoView` |
 | OTP / PIN input | — | ⚠️ No Holon equivalent — **stop and ask the developer** |
 
 ---
@@ -124,7 +124,7 @@ identified in a mockup. If no Holon equivalent exists, **stop immediately and as
 | Loading spinner | ⚠️ No Holon equivalent — **stop and ask the developer** |
 
 > `NotificationUtil` is `com.holonplatform.vaadin.flow.components.utils.NotificationUtil` — it IS in Holon.
-> `AlertDialog` is `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog`.
+> `AlertDialog` is `com.iyensoft.vaadin.flow.components.AlertDialog`.
 
 ---
 

@@ -10,17 +10,21 @@ Skills MUST read this file at the start of each code-generation task and enforce
 | Component | Artifact / Version | Source of truth |
 |-----------|-------------------|-----------------|
 | Java | 25 | — |
-| Holon Core | `com.holon-platform.core:holon-core:10.0.0` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Auth | `com.holon-platform.core:holon-auth:10.0.0` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon JPA Datastore Starter | `com.holon-platform.jpa:holon-datastore-jpa-spring-boot:10.0.0` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Vaadin Flow BOM | `com.holon-platform.vaadin:holon-vaadin-flow-bom:10.0.1` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Vaadin Flow | `com.holon-platform.vaadin:holon-vaadin-flow:10.0.1` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Vaadin Flow Spring Boot | `com.holon-platform.vaadin:holon-vaadin-flow-spring-boot:10.0.1` | https://github.com/vaithu/holon-vaadin-flow |
-| Vaadin Flow | `com.vaadin:vaadin-bom:25.2.1` | — |
+| Holon Core | `com.holon-platform.core:holon-core:12.0.0` | https://github.com/vaithu/holon-vaadin-flow |
+| Holon Auth | `com.holon-platform.core:holon-auth:12.0.0` | https://github.com/vaithu/holon-vaadin-flow |
+| Holon JPA Datastore Starter | `com.holon-platform.jpa:holon-datastore-jpa-spring-boot:12.0.0` | https://github.com/vaithu/holon-vaadin-flow |
+| Parent POM | `com.iyensoft:parent:2.1.0` (every project inherits it; `com.holon-platform:parent` is banned). It pins `junit-jupiter-api` and `-engine` at 6.1.3 while Spring Boot's BOM manages the rest of JUnit at 6.0.3; import `org.junit:junit-bom:6.1.3` **before** `spring-boot-dependencies`, or no test starts | https://github.com/vaithu |
+| Holon SaaS BOM | `com.holon-platform.multi-tenancy:holon-multi-tenancy-bom:1.0.0` | https://github.com/vaithu/holon-saas |
+| Holon SaaS Starter | `com.holon-platform.multi-tenancy:holon-starter-multi-tenancy:1.0.0` | https://github.com/vaithu/holon-saas |
+| Holon Vaadin Flow BOM | `com.holon-platform.vaadin:holon-vaadin-flow-bom:12.0.1` | https://github.com/vaithu/holon-vaadin-flow |
+| Holon UI composites (`Components`, `ListingBundle`, `EntityFormPanel`, `AlertDialog`, `MasterDetailLayout` …) | `com.iyensoft.vaadin:iyen-core` — version managed by the Vaadin Flow BOM, but **not** pulled in by `holon-starter-vaadin-flow`: declare it explicitly | https://github.com/vaithu/holon-vaadin-flow |
+| Holon Vaadin Flow | `com.holon-platform.vaadin:holon-vaadin-flow:12.0.1` | https://github.com/vaithu/holon-vaadin-flow |
+| Holon Vaadin Flow Spring Boot | `com.holon-platform.vaadin:holon-vaadin-flow-spring-boot:12.0.1` | https://github.com/vaithu/holon-vaadin-flow |
+| Vaadin Flow | `com.vaadin:vaadin-bom:25.3.0` | — |
 | Vaadin AI (free core) | `com.vaadin:vaadin-ai-core-flow` (managed by `vaadin-bom`; requires Vaadin 25.1+) | — |
 | Spring AI (optional LLM provider) | `org.springframework.ai:spring-ai-*` | — |
 | LangChain4j (optional LLM provider) | `dev.langchain4j:langchain4j-*` | — |
-| Spring Boot | `org.springframework.boot:spring-boot-starter:4.1.0` | — |
+| Spring Boot | `org.springframework.boot:spring-boot-starter:4.1.1` | — |
 | Jakarta Servlet | `jakarta.servlet:jakarta.servlet-api:6.1.0` (Jakarta EE 11) | — |
 | Flyway | `org.flywaydb:flyway-core:10.x` | — |
 | PostgreSQL | `org.postgresql:postgresql:42.x` | — |
@@ -29,13 +33,18 @@ Skills MUST read this file at the start of each code-generation task and enforce
 | Playwright | `com.microsoft.playwright:playwright:latest` | — |
 | Vaadin Testbench Unit | `com.vaadin:vaadin-testbench-unit-junit5:latest` | — |
 
-> **Holon 10.x source:** Holon 10.x artifacts target Vaadin 25.2 + Spring Boot 4.1 + Jakarta EE 11.
+> **Holon 12.x source:** Holon 12.x artifacts target Vaadin 25.3 + Spring Boot 4.1 + Jakarta EE 11.
 > Build from the fork at https://github.com/vaithu/holon-vaadin-flow (branch `modernize/java-20260526093038`)
 > and install locally (`mvn install`) before using in application projects.
 
 > **BOM usage:** Import `holon-vaadin-flow-bom` for Vaadin Flow types and `vaadin-bom` for Vaadin
 > components. The Holon JPA Datastore is pulled in via the `holon-datastore-jpa-spring-boot` starter
 > (no separate BOM required). The artifact `com.holon-platform:holon-bom` does **not** exist.
+
+> **Datastore standard:** the persistence standard is the Holon **JPA** datastore, used through
+> `BeanDatastore` and `BeanDatastoreHelper` (see *Persistence (BeanDatastoreHelper)* below). The Holon
+> JDBC datastore (`com.holon-platform.jdbc:*`, `holon-datastore-jdbc`) is **not** used; skills must not
+> add it. Raw `EntityManager` / Spring Data JPA remain fallbacks only, per the rules below.
 
 ---
 
@@ -57,6 +66,7 @@ org.testcontainers:*                   — test layer
 com.microsoft.playwright:*             — E2E test layer
 com.vaadin:vaadin-testbench-unit-junit5
                                         — Vaadin Browserless tests
+com.iyensoft.vaadin.flow.components.*    — Holon UI composites from `iyen-core` (`Components`, `ListingBundle`, `EntityFormPanel`, …)
 com.vaadin.flow.signals.*              — Vaadin Signals (reactive state; see §"Vaadin Signals" below)
 com.vaadin.flow.ai.*                   — Vaadin AI orchestrator + LLM provider SPI (free `vaadin-ai-core-flow`)
 com.vaadin.flow.component.ai.*         — Vaadin AI orchestrator components (free `vaadin-ai-core-flow`)
@@ -123,6 +133,58 @@ public class BillService {
 
 ---
 
+## Multi-Tenancy (holon-saas)
+
+Every SaaS application uses the **`holon-saas`** framework for everything tenant-related.
+Skills MUST NOT hand-roll tenant resolution, schema routing, tenant-scoped security, tenant
+settings, audit, users, billing, quotas, rate limits or onboarding. Add the BOM and the single
+starter; every module is expected and allowed.
+
+| Concern | Module (`com.holon-platform.multi-tenancy:holon-multi-tenant-*`) | Use for |
+|---|---|---|
+| Tenant model and context | `core` | `TenantDetails`, `TenantContext`, `TenantPlan`, `TenantFeature`, lifecycle events |
+| Datasource routing, schema isolation | `data` | schema-per-tenant routing, per-tenant Flyway migrations |
+| Security | `security` | `TenantAwareUserDetails`, `TenantIsolationFilter`, tenant-aware `AuthContext` wiring |
+| Onboarding / signup | `onboarding`, `signup` | tenant provisioning pipeline, `SignupService` (needs your `AccountCredentialsStore`) |
+| Audit | `audit` | `@AuditAction`, pluggable audit storage |
+| Settings | `settings` | per-tenant typed key/value settings (**country lives here**, see rule 5) |
+| Users, roles, permissions, invitations | `users`, `permissions`, `invitations` | tenant user lifecycle and role-based permissions |
+| Billing, quotas, limits | `billing`, `quotas`, `limits` | subscriptions and invoices, quotas, `@RateLimit` / `@TenantLimit` |
+| Admin | `admin` | super-admin services (UI-agnostic) |
+| Messaging, cache | `whatsapp`, `cache-redis` | WhatsApp Business API, Redis cache |
+
+**Rules**
+
+1. Tenant data is reached only through `TenantContext`; never read a tenant id from a request,
+   header or session by hand.
+2. Application code uses `Datastore` / `BeanDatastoreHelper` and Holon Auth. Only the carve-out
+   below may touch Spring Security or JPA directly.
+3. Follow `holon-saas/docs/new-saas-app-checklist.md` for properties, entity mapping and
+   transaction boundaries; treat it as part of this rule set.
+4. `spring.jpa.hibernate.ddl-auto=none`, `spring.jpa.open-in-view=false`,
+   `spring.threads.virtual.enabled=true`, and `holon.tenant.data.dialect` must match the real
+   database (`H2` for local dev, `POSTGRESQL` for production; `MYSQL` is not supported).
+5. The tenant's **operating country** is a tenant `settings` value, read through the tenant
+   settings service. It is never a column copied onto business entities and never taken from the
+   user. Country-specific rules follow [`country-variation.md`](country-variation.md).
+
+### holon-saas carve-out for Spring Security and JPA
+
+`holon-saas` is built on Spring Security and JPA. The bans below therefore have a narrow,
+named exception, and **no `// FALLBACK:` comment is required** inside it:
+
+| Banned item | Allowed only for |
+|---|---|
+| `org.springframework.security.core.*`, `org.springframework.security.config.*` | the `PasswordEncoder` bean, the `AccountCredentialsStore` implementation, and the `holon-saas` security wiring named in its checklist |
+| `jakarta.persistence.*` | the tenant-owned `@Entity` classes the checklist requires (public no-arg constructor, getter and setter on every persisted field, no `@ElementCollection`) and `@EnableJpaAuditing(auditorAwareRef = "securityContextActorResolver")` |
+| `org.springframework.data.*` | the plain `JpaRepository` route that checklist section 6 allows for entities Holon's Datastore cannot map |
+| `org.springframework.data.annotation.{CreatedBy, CreatedDate, LastModifiedBy, LastModifiedDate}`, `org.springframework.data.jpa.domain.support.AuditingEntityListener` | the audit base class of the tenant-owned entities: the `@EnableJpaAuditing(auditorAwareRef = "securityContextActorResolver")` above is meaningless without them |
+
+Everywhere else (views, domain beans, other services) the original bans apply unchanged,
+including the JPA anti-pattern guardrail.
+
+---
+
 ## Banned Imports
 
 Skills MUST refuse to emit code containing any of the following. Verification:
@@ -131,20 +193,21 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 | Import / class | Reason | Correct alternative |
 |---------------|--------|---------------------|
 | `com.holonplatform.auth.annotations.Permitted` | **`@Permitted` does not exist in Holon Auth** — use `@Authenticate` (declarative login guard) + `@RolesAllowed` (permission guard) on the route class | `@Authenticate` + `jakarta.annotation.security.RolesAllowed` |
-| `com.vaadin.flow.component.formlayout.FormLayout` (as a form container) | **Do not assemble forms manually with `FormLayout` + `Input` fields** — use `EntityPanelForm` instead | `com.holonplatform.vaadin.flow.components.EntityPanelForm` |
-| `com.vaadin:vaadin-core` / `com.vaadin.flow.component.*` | **Raw Vaadin core components are banned.** If no Holon equivalent exists, stop and ask the developer. | Holon Vaadin Flow (`com.holonplatform.vaadin.flow.components.*`); ask developer if no equivalent |
+| `com.vaadin.flow.component.formlayout.FormLayout` (as a form container) | **Do not assemble forms manually with `FormLayout` + `Input` fields** — use `EntityFormPanel` instead | `com.iyensoft.vaadin.flow.components.EntityFormPanel` |
+| `com.vaadin:vaadin-core` / `com.vaadin.flow.component.*` | **Raw Vaadin core components are banned.** If no Holon equivalent exists, stop and ask the developer. | Holon Vaadin Flow (`com.iyensoft.vaadin.flow.components.*`, plus `com.holonplatform.vaadin.flow.components.*` for `Input`, builders and `KanbanBoard`); ask developer if no equivalent |
 | `com.vaadin.flow.ai.controller.*` built-in controllers (`GridAIController`, `ChartAIController`, `FormAIController`) / `com.vaadin:vaadin-ai-extensions-flow` | **Commercial Vaadin AI extensions** — require a paid subscription | Free `vaadin-ai-core-flow` + a **Holon-backed custom `AIController` / `DatabaseProvider`** |
 | `com.holonplatform.core.property.PropertyBox` | **Use `Bean` + `BeanPropertySet` exclusively** | Plain JavaBean + `BeanPropertySet<T>` |
-| `jakarta.persistence.*` / `javax.persistence.*` | JPA annotations — only allowed when used as Spring JPA fallback (when Holon `BeanDatastoreHelper`/`Datastore` cannot fulfil the query); requires a `// FALLBACK: BeanDatastoreHelper has no equivalent for <thing>` comment | `@DataPath` / `@Identifier` on plain JavaBean |
+| `jakarta.persistence.*` / `javax.persistence.*` | JPA annotations — only allowed when used as Spring JPA fallback (when Holon `BeanDatastoreHelper`/`Datastore` cannot fulfil the query); requires a `// FALLBACK: BeanDatastoreHelper has no equivalent for <thing>` comment **and** a clean run of the [JPA anti-pattern guardrail](jpa-anti-patterns.md) | `@DataPath` / `@Identifier` on plain JavaBean |
 | `org.hibernate.validator.constraints.*` | Hibernate-specific constraint annotations — use standard Jakarta Bean Validation instead | `jakarta.validation.constraints.*` (`@NotBlank`, `@NotNull`, `@Size`, `@Min`, `@Max`, `@Email`, etc.) |
 | `org.springframework.data.jpa.*` | Spring Data JPA — use only as a fallback when `BeanDatastoreHelper`/`Datastore` cannot fulfil the requirement; requires a `// FALLBACK:` comment | `Datastore` + `BeanPropertySet` |
 | `org.springframework.data.repository.*` | Spring Data repositories — use only as part of Spring JPA fallback; requires a `// FALLBACK:` comment | `Datastore` + `BeanPropertySet` |
 | `org.springframework.web.bind.annotation.*` | Spring MVC REST — Vaadin IS the UI layer | n/a — no REST layer |
+| `com.holon-platform:parent` (as a `<parent>`) | Legacy 1.1.x parent; all projects inherit the vendored parent | `com.iyensoft:parent:2.1.0` |
 | `org.springframework.beans.factory.annotation.Autowired` | Field/setter injection — hides dependencies | **constructor injection** |
 | `org.springframework.security.core.*` | Spring Security | Holon Auth: `Realm`, `Authenticator`, `AuthContext`, `Permission` |
 | `org.springframework.security.config.*` | Spring Security config | Holon Auth bootstrap + filter-chain wiring only if Holon Auth requires it |
 | `com.vaadin.flow.i18n.I18NProvider` and direct `UI.getCurrent().getTranslation(...)` usage | Keep localization consistent with Holon stack conventions | Holon Core i18n (`Localizable` + `LocalizationContext.require().getMessage(key, fallback)`) |
-| `@Theme("<app-name>")` (`com.vaadin.flow.theme.Theme`) | Deprecated in Vaadin 25.2 — the `themes/<name>/` directory approach is removed | `@StyleSheet(Lumo.STYLESHEET)` (or `Aura.STYLESHEET`) followed by `@StyleSheet("styles.css")` on `AppShellConfigurator`; custom CSS in `src/main/resources/META-INF/resources/styles.css` |
+| `@Theme("<app-name>")` (`com.vaadin.flow.theme.Theme`) | Deprecated in Vaadin 25.3 — the `themes/<name>/` directory approach is removed | `@StyleSheet(Lumo.STYLESHEET)` (or `Aura.STYLESHEET`) followed by `@StyleSheet("styles.css")` on `AppShellConfigurator`; custom CSS in `src/main/resources/META-INF/resources/styles.css` |
 
 > **Spring stereotypes note:** `@Service`, `@Component`, and `@Repository` are **permitted**
 > (see *Allowed Dependencies*) when the class needs Spring lifecycle participation, but
@@ -153,38 +216,63 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 
 ---
 
+## JPA Anti-Patterns Guardrail
+
+Whenever a skill emits JPA code — an `@Entity`, a `JpaRepository`, a `@Transactional`
+service, or a `spring.jpa.*` property — it MUST run the guardrail defined in
+[`jpa-anti-patterns.md`](jpa-anti-patterns.md) **before** writing the file.
+
+The short version:
+
+- 🛑 **BLOCK findings are never emitted.** Rewrite to the correct form, or stop and ask
+  the developer. Emitting a blocked anti-pattern with an explanatory comment is a violation.
+- ⚠️ **WARN findings** require an inline `// JPA-WAIVER(<id>): <one-line justification>`
+  comment plus an entry in the final report.
+- Every task that touched JPA code prints a **JPA anti-pattern guardrail** report, or
+  `✅ JPA anti-pattern guardrail: clean`.
+
+High-frequency 🛑 blockers (full table in [`jpa-anti-patterns.md`](jpa-anti-patterns.md)):
+`FetchType.EAGER` (including the `@ManyToOne` default), `CascadeType.ALL`/`REMOVE` on the
+many side, `@OneToMany` without `mappedBy`, `List` for `@ManyToMany`, `@Enumerated` /
+Java enums for domain values, `GenerationType.AUTO`, missing `@Version`, Lombok `@Data`
+on entities, `equals`/`hashCode` on a generated id, N+1 association access inside a loop,
+`findAll()` inside a listing fetch callback, custom methods on a repository,
+`repository.save()` for writes, and `open-in-view=true` / `ddl-auto=update`.
+
+---
+
 ## Component Preferences
 
 When Holon offers more than one component for the same job, Skills MUST emit the
 preferred composite component below. The lower-level primitive is allowed **only** when
 the preferred bundle cannot express the requirement, and every such use MUST be preceded
-by `// FALLBACK: ListingBundle/EntityPanelForm cannot express <thing>`.
+by `// FALLBACK: ListingBundle/EntityFormPanel cannot express <thing>`.
 
 | UI concern | Preferred component | Do **not** use directly | Correct usage |
 |-----------|---------------------|-------------------------|---------------|
-| Data grid / table listing | `com.holonplatform.vaadin.flow.components.ListingBundle` | `PropertyListing` | `ListingBundle.builder(Bean.PROPERTIES).dataSource(ds, Bean.PROPERTIES.getDataPath()).build()` |
-| Entity form (create / edit / detail) | `com.holonplatform.vaadin.flow.components.EntityPanelForm` | `PropertyForm`, `FormLayout` + individual `Input` fields | `EntityPanelForm.builder(Bean.PROPERTIES).build()` + `setBean()` / `getBean()` |
+| Data grid / table listing | `com.iyensoft.vaadin.flow.components.ListingBundle` | `PropertyListing` | `Components.listing(Bean.class)` (a `ListingBundleBuilder`; `ListingBundle` has no static `builder`) |
+| Entity form (create / edit / detail) | `com.iyensoft.vaadin.flow.components.EntityFormPanel` | `PropertyForm`, `FormLayout` + individual `Input` fields | `EntityFormPanel.bean(Bean.class).build()` + `setBean()` / `getBean()` |
 
-> `ListingBundle` wraps a `PropertyListing`; `EntityPanelForm` wraps a `PropertyForm`.
+> `ListingBundle` wraps a `PropertyListing`; `EntityFormPanel` wraps a `PropertyForm`.
 > Both bind to a `BeanPropertySet<T>` and work with plain beans — never `PropertyBox`.
 
 ### Form authoring rules
 
-**Rule 1 — Always use `EntityPanelForm` for forms.**
-Never build a form by assembling a `FormLayout` + individual `Input` fields manually. Every create / edit / detail screen MUST use `EntityPanelForm`. If `EntityPanelForm` cannot express a requirement, use a `// FALLBACK:` comment and fall back to `PropertyForm` — never to raw `FormLayout`.
+**Rule 1 — Always use `EntityFormPanel` for forms.**
+Never build a form by assembling a `FormLayout` + individual `Input` fields manually. Every create / edit / detail screen MUST use `EntityFormPanel`. If `EntityFormPanel` cannot express a requirement, use a `// FALLBACK:` comment and fall back to `PropertyForm` — never to raw `FormLayout`.
 
 **Rule 2 — Validation lives on the bean, not in the UI.**
-All validation constraints (`@NotNull`, `@NotBlank`, `@Size`, `@Min`, `@Max`, `@Email`, etc.) are declared as Jakarta Bean Validation annotations on the domain bean. `EntityPanelForm` reads them automatically via `.autoRequiredIndicators(true)` and fires validation on save — do not add manual `.required(...)` / `.withValidator(...)` calls to individual inputs inside `EntityPanelForm`.
+All validation constraints (`@NotNull`, `@NotBlank`, `@Size`, `@Min`, `@Max`, `@Email`, etc.) are declared as Jakarta Bean Validation annotations on the domain bean. `EntityFormPanel` reads them automatically via `.autoRequiredIndicators(true)` and fires validation on save — do not add manual `.required(...)` / `.withValidator(...)` calls to individual inputs inside `EntityFormPanel`.
 
 **Rule 3 — Every dropdown / combobox value MUST be a lookup entity.**
 Never hard-code a list of `String` items (e.g. `"PENDING"`, `"APPROVED"`) directly into a select input. Instead:
 
 1. Create a dedicated lookup JavaBean for the selectable values (e.g. `Industry`, `Status`, `Country`) with at minimum `id` (`@Identifier`) and `name` fields.
 2. Persist these records in a dedicated table managed by a Flyway migration.
-3. Bind the form field via `.bind(...)` inside `EntityPanelForm` using a `singleSelect` whose items come from a service call:
+3. Bind the form field via `.bind(...)` inside `EntityFormPanel` using a `singleSelect` whose items come from a service call:
 
 ```java
-EntityPanelForm.bean(Customer.class)
+EntityFormPanel.bean(Customer.class)
     .bind("industryId", Components.input.singleSelect(Long.class)
         .label(Localizable.of("Industry", "customer.industry"))
         .items(industryService.findAll(), Industry::getId, Industry::getName)
@@ -241,7 +329,7 @@ public class Order {
 ```
 
 > `@Caption(value, messageCode)` is **required on every user-visible field**. The
-> `BeanPropertySet` reads it at build time; `ListingBundle` and `EntityPanelForm` use
+> `BeanPropertySet` reads it at build time; `ListingBundle` and `EntityFormPanel` use
 > it automatically for column headers and field labels — no `.columnHeader()` /
 > `.propertyCaption()` calls needed in the view.
 >
@@ -258,7 +346,7 @@ Use **typed sub-types** wherever available — they expose the richer query expr
 - `NumericProperty<T>` → `.count()`, `.sum()`, `.avg()`, `.min()`, `.max()`
 - `StringProperty` → `.contains()`, `.startsWith()`, `.endsWith()`, case-insensitive variants
 - `TemporalProperty<T>` → `.year()`, `.month()`, `.day()`, `.hour()`
-- `BooleanProperty` → `.isTrue()`, `.isFalse()`
+- `BooleanProperty` → `.eq(true)`, `.eq(false)` (there is no `isTrue()` / `isFalse()`)
 
 ```java
 // e.g. OrderModel.java — same feature package as Order.java
@@ -332,23 +420,29 @@ helper.withTransaction(tx -> {
 });
 ```
 
-See [`references/datastore-patterns.md`](skills/implement/references/datastore-patterns.md)
+**Helper pitfalls found by compiling against the library:**
+
+- `BeanDatastoreHelper` has no sort-only `findAll(QuerySort)`. To sort without filtering, pass a filter every row passes, for example `findAll(Model.ID.isNotNull(), Model.NAME.asc())`.
+- `BooleanProperty` has `eq(true)`, not `isTrue()`.
+- A `DateTime` attribute is an `Instant` in the bean and `TIMESTAMP WITH TIME ZONE` in the migration (`JPA-008`).
+
+See [`skills/implement/references/datastore-patterns.md`](../skills/implement/references/datastore-patterns.md)
 for the full method reference including pagination, bulk operations, and the typed Model
 interface pattern.
 
 ### UI (Holon Vaadin Flow)
 
-Grids MUST use `ListingBundle`; forms MUST use `EntityPanelForm`. Both are Holon
-Vaadin Flow composite components (package `com.holonplatform.vaadin.flow.components`)
+Grids MUST use `ListingBundle`; forms MUST use `EntityFormPanel`. Both are Holon
+Vaadin Flow composite components (package `com.iyensoft.vaadin.flow.components` in `iyen-core`)
 bound to a `BeanPropertySet`. Reach for the lower-level `PropertyListing` /
 `PropertyForm` primitives only when the bundle cannot express the need — see
 **Component Preferences** below.
 
 ```java
 import com.holonplatform.auth.annotations.Authenticate;
-import com.holonplatform.vaadin.flow.components.Components;
-import com.holonplatform.vaadin.flow.components.ListingBundle;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Components;
+import com.iyensoft.vaadin.flow.components.ListingBundle;
+import com.iyensoft.vaadin.flow.components.Layout;
 
 import jakarta.annotation.security.RolesAllowed;
 
@@ -371,9 +465,9 @@ public class OrderListView extends Layout {
 
 ```java
 // Detail / form view
-import com.holonplatform.vaadin.flow.components.EntityPanelForm;
+import com.iyensoft.vaadin.flow.components.EntityFormPanel;
 
-EntityPanelForm<Order> form = EntityPanelForm.builder(Order.PROPERTIES).build();
+EntityFormPanel<Order> form = EntityFormPanel.bean(Order.class).build();
 form.setBean(existingOrder);            // populate from bean
 Order updated = form.getBean();         // read back
 ```
@@ -394,7 +488,7 @@ Input<String> nameInput = Components.input.string()
 - **Embed I18N in the bean:** annotate every user-visible field with
   `@Caption(value = "<fallback>", messageCode = "<domain>.<field>")` from
   `com.holonplatform.core.i18n.Caption`. `BeanPropertySet` reads these at startup and
-  `ListingBundle` / `EntityPanelForm` resolve labels automatically — no `.columnHeader()` /
+  `ListingBundle` / `EntityFormPanel` resolve labels automatically — no `.columnHeader()` /
   `.propertyCaption()` overrides needed in view code.
 - Keep translation keys stable and domain-scoped (e.g. `bill.vendorName`, `bill.approve`),
   and keep fallback text next to the key for readability in generated code snippets.
@@ -408,8 +502,8 @@ Input<String> nameInput = Components.input.string()
 
 The stack targets **WCAG 2.1 AA**. Skills MUST satisfy the following for every screen emitted:
 
-- Every input has a visible label via `.label(Localizable.of(...))` — never use placeholder as the sole label. When the input is rendered from an `EntityPanelForm`, the label comes from the bean's `@Caption` annotation automatically.
-- Every required field calls `.required(Localizable.of(...))` so `aria-required="true"` is set automatically. For bean-bound forms, annotate the field with `@NotNull` so `EntityPanelForm` applies this automatically.
+- Every input has a visible label via `.label(Localizable.of(...))` — never use placeholder as the sole label. When the input is rendered from an `EntityFormPanel`, the label comes from the bean's `@Caption` annotation automatically.
+- Every required field calls `.required(Localizable.of(...))` so `aria-required="true"` is set automatically. For bean-bound forms, annotate the field with `@NotNull` so `EntityFormPanel` applies this automatically.
 - Every `Components.button()` has either visible text via `.text(Localizable.of(...))` or an explicit `aria-label` for icon-only buttons.
 - Data grids (`ListingBundle`) have: `aria-label` on the grid element, column headers auto-resolved from `@Caption` on bean fields (override with `.columnHeader(prop, Localizable)` only when a view-specific label differs), and a translated empty-state message via `.setEmptyStateText(Localizable)`.
 - Confirmation dialogs (`ConfirmDialog`) restore focus to the trigger element on close.
@@ -622,8 +716,8 @@ Generated code MUST follow these principles in addition to the stack rules above
 - [ ] Every `PropertySet` that is used with the Datastore (query projections, listings) declares `.withIdentifier(ID)` — UI-only subsets (FORM) are exempt
 - [ ] Data grids use `ListingBundle`; bare `PropertyListing` only with a `// FALLBACK:` justification (grep: `PropertyListing`)
 - [ ] Every `ListingBundle` calls `.emptyState()` or `.emptyState(customEmpty)` so a meaningful UI is shown when the app is first opened with no data (grep: `emptyState`)
-- [ ] Forms use `EntityPanelForm`; bare `PropertyForm` only with a `// FALLBACK:` justification (grep: `PropertyForm`); no `FormLayout` + manual `Input` assembly in any form screen
-- [ ] Every form field's validation constraints (`@NotNull`, `@NotBlank`, etc.) are on the bean — no manual `.required(...)` / `.withValidator(...)` calls inside `EntityPanelForm`
+- [ ] Forms use `EntityFormPanel`; bare `PropertyForm` only with a `// FALLBACK:` justification (grep: `PropertyForm`); no `FormLayout` + manual `Input` assembly in any form screen
+- [ ] Every form field's validation constraints (`@NotNull`, `@NotBlank`, etc.) are on the bean — no manual `.required(...)` / `.withValidator(...)` calls inside `EntityFormPanel`
 - [ ] Every dropdown / combobox whose items are user-managed data uses a lookup entity + service call for items — no hard-coded `String` lists passed directly to `singleSelect`/`multiSelect`
 - [ ] No `@Autowired` — dependencies injected via constructors (grep: `@Autowired`)
 - [ ] `@Service` / `@Component` / `@Repository` used only when Spring lifecycle is required (else prefer Holon `Context`)

@@ -17,6 +17,8 @@ public class CrmSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
+                // Public stylesheets injected via context:// into every page (incl. the anonymous login/signup views)
+                .requestMatchers("/*.css").permitAll()
                 .requestMatchers("/accept-invite/**", "/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
         );
@@ -34,4 +36,9 @@ public class CrmSecurityConfig {
     public SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
     }
+
+    // The Holon AuthContext consumed by the Vaadin navigator's route guards is provided by
+    // tenant-security's TenantSecurityAutoConfiguration (springSecurityAuthContext bean), and
+    // tenant binding from the authenticated principal on Vaadin UIDL requests is handled by its
+    // AuthenticatedPrincipalTenantContextFilter — both enabled by default.
 }

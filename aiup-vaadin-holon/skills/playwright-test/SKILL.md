@@ -41,6 +41,29 @@ Cover:
 3. **Visual regression** — `assertThat(page).hasScreenshot(...)` snapshots for
    each stable, fully-loaded view state to catch unintended UI regressions.
 
+## Traceability naming contract
+
+A Playwright test **must not** end in `Test`. Surefire claims `*Test` and runs
+it in the unit-test phase, where nothing is deployed and the browser has
+nothing to connect to. `TestLayerConventionsTest` fails the build on this, and
+it is the single most common mistake in this layer.
+
+| Rule | Form |
+|---|---|
+| A test case journey | `TC<NNN><Name>IT` — e.g. `TC001BillApprovalIT` |
+| A single use case, end to end | `UC<NNN><Name>IT` |
+| Phase | Failsafe (`*IT`), so these run in `mvn verify` |
+| Journey class annotation | `@TestCase(id = "TC-NNN", useCases = {"UC-004", "UC-007"})` |
+| Single use case method | `@UseCase(id = "UC-NNN", scenario = "<exact flow heading>")` |
+
+`useCases` must list exactly the use cases named in the test case document's
+Flow table — no more, no less. `TestCaseTraceabilityTest` compares the two and
+reports the difference in both directions, so an extra id is as much a failure
+as a missing one.
+
+A test case whose `**Status:**` is `Automated` must have a `*IT` covering its
+whole Flow table. Set that status after the test exists — see `/coverage-check`.
+
 ## Quality Gate Guardrail
 
 When testing starts, this skill also enforces the SonarQube-equivalent **quality
@@ -101,7 +124,7 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class BillApprovalE2ETest {
+class TC001BillApprovalIT {
 
     static Playwright playwright;
     static Browser browser;
@@ -222,7 +245,7 @@ import java.util.List;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class BillListViewVisualTest {
+class BillListViewVisualIT {
 
     static Playwright playwright;
     static Browser browser;

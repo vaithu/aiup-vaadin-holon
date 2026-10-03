@@ -8,12 +8,12 @@
     {
       "name": "aiup-core",
       "source": "./aiup-core",
-      "description": "AI Unified Process — stack-agnostic core methodology (requirements, entity model, use case diagram, use case spec, reverse-engineer)"
+      "description": "AI Unified Process — stack-agnostic core methodology: requirements, entity model, use case diagram, use case spec, shared business rules, test cases, 4+1 architecture views, ADRs, reverse-engineer"
     },
     {
       "name": "aiup-vaadin-holon",
       "source": "./aiup-vaadin-holon",
-      "description": "AI Unified Process plugin for the Holon Platform + Vaadin Flow stack: Bean/BeanPropertySet persistence via Holon Datastore, Holon Vaadin Flow UI, Holon Auth security. Java 21 / Holon 6.0.x / Vaadin 24 LTS / Spring Boot 3.3.x LTS."
+      "description": "AI Unified Process plugin for the Holon Platform + Vaadin Flow stack: Bean/BeanPropertySet domain model, Holon JPA Datastore persistence (BeanDatastore / BeanDatastoreHelper), holon-saas multi-tenancy, Holon Vaadin Flow UI, Holon Auth security — plus the executable harness: traceability sensors, ArchUnit rules, coverage audits and session guards. Java 25 / Holon 12.0.x / Vaadin 25.3.x / Spring Boot 4.1.x."
     }
   ]
 }

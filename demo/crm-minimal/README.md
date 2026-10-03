@@ -217,9 +217,9 @@ Matches [`aiup-vaadin-holon/rules/holon-stack.md`](../../aiup-vaadin-holon/rules
 | Component | Version |
 |-----------|---------|
 | Java | 25 |
-| Holon Core / Auth / JDBC | 10.0.0 |
-| Holon Vaadin Flow | 10.0.1 |
-| Vaadin Flow | 25.2.1 |
+| Holon Core / Auth / JDBC | 12.0.0 |
+| Holon Vaadin Flow | 12.0.1 |
+| Vaadin Flow | 25.3.1 |
 | Spring Boot | 4.1.0 |
 | Flyway | (managed by Spring Boot parent) |
 | PostgreSQL JDBC | 42.7.11 |

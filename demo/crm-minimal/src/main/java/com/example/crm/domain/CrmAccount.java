@@ -1,6 +1,5 @@
 package com.example.crm.domain;
 
-import com.holonplatform.core.beans.DataPath;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

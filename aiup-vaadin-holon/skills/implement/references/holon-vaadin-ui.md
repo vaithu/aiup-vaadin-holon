@@ -1,5 +1,5 @@
 # Holon Vaadin UI Patterns Reference
-# `holon-vaadin-flow` 10.0.3-SNAPSHOT
+# `holon-vaadin-flow` 12.0.3-SNAPSHOT
 
 All UI is built exclusively through **`Components.*`** factory methods and
 **`EntityFormPanel`** / **`ListingBundle`** / **`MasterDetailLayout`** composites.
@@ -49,7 +49,7 @@ directly or construct `DrawerToggle`/`SideNav` manually.
 ```java
 package com.example.ap.shared;
 
-import com.holonplatform.vaadin.flow.vaadinplus.components.AppShellLayout;
+import com.iyensoft.vaadin.flow.components.AppShellLayout;
 import com.vaadin.flow.router.RouterLayout;
 
 public class MainLayout extends AppShellLayout implements RouterLayout {
@@ -103,7 +103,7 @@ public class MainLayout extends AppShellLayout implements RouterLayout {
 package com.example.ap.bill;
 
 import com.holonplatform.auth.annotations.Authenticate;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Layout;
 import com.vaadin.flow.router.Route;
 
 import jakarta.annotation.security.RolesAllowed;
@@ -189,8 +189,8 @@ state. Build it via `Components.listing(...)`.
 > is no data yet. Omitting the call leaves the grid blank with no feedback to the user.
 
 ```java
-import com.holonplatform.vaadin.flow.components.Components;
-import com.holonplatform.vaadin.flow.components.ListingBundle;
+import com.iyensoft.vaadin.flow.components.Components;
+import com.iyensoft.vaadin.flow.components.ListingBundle;
 
 // Components.listing(Class<T>) → ListingBundleBuilder<T> → ListingBundle<T>
 // Use q.getOffset() + q.getLength() for lazy/virtual-scroll loading via BeanDatastoreHelper.findSlice
@@ -248,7 +248,7 @@ Use `Empty.builder()` to build a branded empty state with an icon, title, descri
 optional call-to-action button. Pass the result to `.emptyState(Empty)`:
 
 ```java
-import com.holonplatform.vaadin.flow.vaadinplus.components.Empty;
+import com.iyensoft.vaadin.flow.components.Empty;
 import com.vaadin.flow.component.icon.VaadinIcon;
 
 Empty myEmptyState = Empty.builder()
@@ -341,7 +341,7 @@ create/edit screens.
 ### FormLayout layout (default)
 
 ```java
-import com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel;
+import com.iyensoft.vaadin.flow.components.EntityFormPanel;
 
 EntityFormPanel<Bill> form = EntityFormPanel.bean(Bill.class)
     .saveButton(btn -> btn.text("Save bill"), bill -> {
@@ -491,13 +491,13 @@ For multi-select lookup fields use `Components.input.multiSelect(Long.class)` in
 
 ---
 
-> ⚠️ **FORM RULE**: Do **not** use `Components.input.*` to assemble form fields manually inside a create / edit / detail screen. Use `EntityPanelForm` — it renders all bean fields automatically from `@Caption` and validates from bean annotations. `Components.input.*` is for **standalone** inputs: search bars, filter toolbars, login fields, OTP fields, and similar single-purpose controls outside a form context.
+> ⚠️ **FORM RULE**: Do **not** use `Components.input.*` to assemble form fields manually inside a create / edit / detail screen. Use `EntityFormPanel` — it renders all bean fields automatically from `@Caption` and validates from bean annotations. `Components.input.*` is for **standalone** inputs: search bars, filter toolbars, login fields, OTP fields, and similar single-purpose controls outside a form context.
 
 All inputs are accessed through `Components.input.*`. Every builder returns a
 `ValidatableInput<T>` or one of its subtypes.
 
 ```java
-import com.holonplatform.vaadin.flow.components.Components;
+import com.iyensoft.vaadin.flow.components.Components;
 
 // Text
 Input<String>   name   = Components.input.string().label("Name").build();
@@ -560,7 +560,7 @@ group.setValue(existingBox);
 
 ## Layout builders
 
-> ⚠️ **FORM RULE**: Do **not** build a form by placing `Input` fields inside a `FormLayout`. Use `EntityPanelForm` for all create / edit / detail screens. `Components.formLayout()` is only for non-form layouts (e.g. side-by-side filter panels or multi-column display regions).
+> ⚠️ **FORM RULE**: Do **not** build a form by placing `Input` fields inside a `FormLayout`. Use `EntityFormPanel` for all create / edit / detail screens. `Components.formLayout()` is only for non-form layouts (e.g. side-by-side filter panels or multi-column display regions).
 
 > 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For
 > **simpler** responsive behaviour (mobile/desktop slot swaps, column counts, hiding/showing
@@ -596,7 +596,7 @@ FormLayout form = Components.formLayout()
     .add(nameInput, emailInput)
     .build();
 
-// Holon Layout (vaadinplus — preferred view base class, more flexible than VerticalLayout)
+// Holon Layout (iyen-core — preferred view base class, more flexible than VerticalLayout)
 Layout layout = Components.layout(comp1, comp2);
 
 // Row/Column grid
@@ -720,7 +720,7 @@ var panel = Components.panel()
 ### Inline alert (banner)
 
 ```java
-import com.holonplatform.vaadin.flow.vaadinplus.components.Alert;
+import com.iyensoft.vaadin.flow.components.Alert;
 
 var alert = Components.alert(Alert.Variant.WARNING)
     .title("Attention")
@@ -774,7 +774,7 @@ NotificationUtil.notificationError(validationException);
 ## Sheet (slide-over panel)
 
 ```java
-import com.holonplatform.vaadin.flow.vaadinplus.components.Sheet;
+import com.iyensoft.vaadin.flow.components.Sheet;
 
 // Bottom sheet
 var sheet = Components.sheet(Sheet.Side.BOTTOM)

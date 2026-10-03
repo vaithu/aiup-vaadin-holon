@@ -1,587 +1,336 @@
 ---
 name: jpa-to-holon-domain
 description: >
-  Convert a Spring JPA entity into a full Holon Platform domain layer in one step:
-  annotates the entity with Holon meta-annotations and Jakarta Validation constraints,
-  creates the BeanPropertySet companion model interface, generates I18N resource bundles,
-  and produces a Spring Data JPA Repository (marker only) plus a Holon BeanDatastoreHelper
-  Service with paginated reads and lazy streaming. Use when asked to "add the domain layer",
-  "create a repository and service", "bridge JPA with Holon", "add property set", or
-  "prepare an entity for Holon Datastore / PropertyInputForm / PropertyListing".
+  Convert a JPA entity into a full Holon Platform domain layer in one step: annotates the
+  entity with Holon meta-annotations and Jakarta Validation constraints, creates the
+  BeanPropertySet companion model interface, generates I18N resource bundles, a Holon
+  BeanDatastoreHelper service, and a mapping test. Follows the project's own conventions
+  (package by feature, audit base class, no repository by default). Use when asked to "add
+  the domain layer", "create a service for an entity", "bridge JPA with Holon", "add
+  property set", or "prepare an entity for Holon Datastore / EntityFormPanel / ListingBundle".
 argument-hint: "[EntityName or package path]"
 ---
 
 # JPA → Holon Platform Domain Layer
 
-Convert the JPA entity (or entities) identified by $ARGUMENTS into a complete Holon Platform
-domain layer. Each entity produces **five artefacts** in a single pass:
+Convert the JPA entity (or entities) identified by $ARGUMENTS into a Holon Platform domain
+layer. Each entity produces **four artefacts and one test** in a single pass:
 
-1. **The entity itself** — annotated with `@Caption` (I18N), `@Ignore`, and Jakarta Validation
-   constraints (`@NotBlank`, `@NotNull`, `@Size`).
-2. **`<Entity>Model`** — a companion interface in the `model` sub-package holding the
-   `BeanPropertySet<T>`, typed `PathProperty<V>` constants, and named sub-sets for listing
-   and form usage.
-3. **Resource bundles** — `messages.properties` (caption labels) and
-   `ValidationMessages.properties` (validation error texts) under `src/main/resources/`.
-4. **`<Entity>Repository`** — a Spring Data JPA repository with **no custom methods**.
-5. **`<Entity>Service`** — a Spring `@Service` that uses `BeanDatastoreHelper<T>` for all
-   writes, the repository for paginated/scalar reads, and a lazy Holon Datastore cursor for
-   streaming.
+1. **The entity** — annotated with `@Caption` (I18N) and Jakarta Validation constraints,
+   extending the project's audit base class.
+2. **`<Entity>Model`** — a companion interface **in the same package** holding the
+   `BeanPropertySet<T>`, typed property constants, and named sub-sets for listing and form.
+3. **Resource bundles** — keys appended to `messages.properties` (captions) and
+   `ValidationMessages.properties` (validation texts) under `src/main/resources/`.
+4. **`<Entity>Service`** — a Spring `@Service` that reads and writes only through
+   `BeanDatastoreHelper<T>`.
+5. **`<Entity>MappingTest`** — runs holon-saas's `HolonEntityMappingValidator` on the entity.
 
----
+There is **no repository** by default (Step 4).
 
-## Background: How Holon bridges JPA automatically
+## The project decides, not this skill
 
-`holon-jpa-bean-processors` (pulled in transitively by `holon-starter-vaadin-flow-saas`) registers
-`BeanPropertyPostProcessor` implementations that read JPA annotations at introspection time:
+Read these before generating; where they differ from this file, they win:
+
+| Read | Decides |
+|---|---|
+| `docs/entity_model.md` | the attributes, types, lengths, which entities are tenant or platform (`**Schema:**`) |
+| `docs/architecture/development.md` | package layout, naming, conventions, persistence notes |
+| `rules/holon-stack.md` (this plugin) | allowed and banned imports, idioms, the holon-saas carve-out |
+| `src/main/resources/db/**` | the real table and column names, sequence `INCREMENT BY` |
+
+The entity is **generated from the entity model and the migrations**, not the other way
+round. A column the entity maps must exist in the migration, with the same name and type.
+
+## Background: how Holon bridges JPA
+
+`holon-jpa-bean-processors` registers `BeanPropertyPostProcessor` implementations that read
+JPA annotations when a bean is introspected:
 
 | JPA annotation | Holon effect |
 |---|---|
 | `@Id` | property marked as **identifier** |
-| `@Column(nullable = false)` | property marked as **required / not-null** |
-| `@Column(updatable = false)` | property marked as **read-only** |
-| `@Column(name = "...")` | column name registered as property path |
-| `@Transient` | property **excluded** from the BeanPropertySet |
-| `@OneToMany`, `@ManyToMany` | collection — add `@Ignore` explicitly |
-| `@ManyToOne`, `@OneToOne` | FK reference — add `@Ignore`; expose FK id separately |
-| `@Embedded` / `@Embeddable` | nested bean — Holon flattens to `<field>.<nestedField>` paths |
-| `@EnumType.STRING` | **migrate to lookup table** — replace the enum field with a `Long` FK (`<field>Id`) referencing a new `<field>` lookup table; create a lookup bean + model + Flyway migration |
+| `@Column(nullable = false)` | property marked **required** |
+| `@Column(updatable = false)` | property marked **read-only** |
+| `@Column(name = "...")` | column name registered as the property path |
+| `@Transient` | **no effect on a scalar getter** — do not rely on it (holon-saas checklist section 2) |
+| `@OneToMany`, `@ManyToMany` | collection — add `@Ignore`; **never** `@ElementCollection` |
+| `@ManyToOne`, `@OneToOne` | FK reference — add `@Ignore`, `fetch = LAZY`; expose the FK id as a `Long` field |
+| `@Enumerated` | **forbidden** — replace with a `Long <field>Id` FK to a lookup table |
 
----
-
-## Package layout
+## Package layout (package by feature)
 
 ```
-com.example.<module>/
-  <Entity>.java                   ← JPA entity (already exists — annotated in Step 1)
-  model/
-    <Entity>Model.java            ← NEW: Holon property model (Step 2)
-  domain/
-    <Entity>Repository.java       ← NEW: empty Spring Data JPA repository (Step 4)
-    <Entity>Service.java          ← NEW: Holon BeanDatastoreHelper service (Step 5)
+com.<org>.<app>.<feature>/            e.g. customer/, inventory/, or shared/ for cross-feature entities
+  <Entity>.java                       the JPA entity
+  <Entity>Model.java                  Holon property model (Step 2)
+  <Entity>Service.java                BeanDatastoreHelper service (Step 5)
+com.<org>.<app>.shared/
+  AuditedEntity.java                  audit base class, written once (Step 1)
 src/main/resources/
-  messages.properties             ← NEW/appended: caption labels (Step 3)
-  ValidationMessages.properties   ← NEW/appended: validation errors (Step 3)
+  messages.properties                 captions (Step 3)
+  ValidationMessages.properties       validation texts (Step 3)
+src/test/java/<same package>/
+  <Entity>MappingTest.java            mapping test (Step 6)
 ```
 
----
+There are **no** `model/`, `domain/` or other layer sub-packages. An entity used by two or
+more features and owned by neither goes in `shared`; keep `shared` small.
 
-## Step 1 — Read and annotate the entity
+## Step 0 — JPA anti-pattern guardrail (blocking)
 
-### 1a. Catalogue the entity fields
+**Read [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md) before writing
+anything.**
 
-Build a mental table before touching anything:
+- **Pass 1** — if an entity already exists, scan it against the Detection Table and report a
+  findings list. Fix findings this skill rewrites anyway (enums → lookup FK, missing
+  `@Version`, `LocalDateTime` → `Instant`); ask before touching anything else.
+- **Pass 2** — before writing, scan what you are about to emit. Zero 🛑 findings; ⚠️ findings
+  carry `// JPA-WAIVER(<id>): <justification>`.
 
-| Field | JPA type | Holon mapping | Action needed |
-|---|---|---|---|
-| `id` (from `BaseEntity`) | `@Id Long` | identifier, read-only | none |
-| `createdAt`, `updatedAt` | `@Column(updatable=false)` | read-only | none |
-| `version` | `@Version` | read-only | none |
-| scalar String | `@Column(length=N, nullable=false)` | mapped | `@NotBlank` + `@Size(max=N)` + `@Caption` |
-| scalar String | `@Column(length=N)` | mapped | `@Size(max=N)` + `@Caption` |
-| non-String scalar | `@Column(nullable=false)` | mapped | `@NotNull` + `@Caption` |
-| enum | `@Enumerated(STRING)` | **migrate to lookup table** | Replace field with `Long <field>Id`; add `@NotNull` + `@Caption`; create lookup bean + Flyway migration |
-| `@Embedded` value object | `@Embedded` | nested bean paths | `@Caption` on nested fields inside `@Embeddable` |
-| `@ManyToOne` / `@OneToOne` | FK reference | **exclude** | `@Ignore` on the object field |
-| `@OneToMany` / `@ManyToMany` | collection | **exclude** | `@Ignore` on the collection field |
+Print the guardrail report in the final summary, or `✅ JPA anti-pattern guardrail: clean`.
 
-### 1b. Add `@Caption` with I18N `messageCode`
+## Step 1 — The entity and the audit base class
+
+### 1a. The audit base class (once per project)
+
+Every entity table carries `created_by`, `created_date`, `last_modified_by`,
+`last_modified_date` and `version`. Put them in one `@MappedSuperclass`:
 
 ```java
-import com.holonplatform.core.i18n.Caption;
-
-// Pattern: @Caption(value = "Human Label", messageCode = "<module>.<entity>.<fieldName>.caption")
-@Caption(value = "Account ID", messageCode = "crm.customer.accountId.caption")
-@Column(name = "account_id", ...)
-private String accountId;
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public abstract class AuditedEntity implements Serializable {
+    @CreatedBy      @Column(name = "created_by", length = 100, nullable = false, updatable = false) private String createdBy;
+    @CreatedDate    @Column(name = "created_date", nullable = false, updatable = false)             private Instant createdDate;
+    @LastModifiedBy @Column(name = "last_modified_by", length = 100)                                private String lastModifiedBy;
+    @LastModifiedDate @Column(name = "last_modified_date")                                          private Instant lastModifiedDate;
+    @Version        @Column(name = "version", nullable = false)                                     private Long version;
+    // public getter and setter for every field
+}
 ```
 
-**messageCode naming convention:** `<module>.<entity>.<fieldName>.caption`
-- `module` = the Java sub-package name (e.g. `crm`, `inventory`, `finance`)
-- `entity` = lower-case entity class name
-- `fieldName` = camelCase field name
+The auditing annotations come from `org.springframework.data.annotation` and
+`AuditingEntityListener` from `org.springframework.data.jpa.domain.support`; the holon-saas
+carve-out in `holon-stack.md` allows them in this class only. holon-saas fills them through its
+`securityContextActorResolver`. Date-times are `Instant` and the columns are
+`TIMESTAMP WITH TIME ZONE` (`JPA-008`).
 
-For `@Embedded` sub-objects, annotate the **nested fields** inside the `@Embeddable` class
-with their own `messageCode`, e.g. `common.address.street.caption`. Do not add `@Caption`
-to the embedding field in the parent entity.
+### 1b. The entity
 
-### 1c. Add Jakarta Validation annotations
-
-**Annotation order on each field:** `@NotBlank` / `@NotNull` → `@Size` → `@Caption` → JPA annotations.
+Rules, from the holon-saas checklist (section 2): a **public no-arg constructor**, a public
+getter **and** setter for every persisted field, no `@ElementCollection`, no Lombok `@Data`
+(`JPA-020`), `equals` on a business key and a constant `hashCode` (`JPA-021`), `toString()`
+on scalar fields only.
 
 ```java
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+@Entity
+@Table(name = "country")
+public class Country extends AuditedEntity {
 
-// String, nullable=false → @NotBlank + @Size if length declared
-@NotBlank(message = "{crm.customer.accountId.notBlank}")
-@Size(max = 20, message = "{crm.customer.accountId.size}")
-@Caption(value = "Account ID", messageCode = "crm.customer.accountId.caption")
-@Column(name = "account_id", length = 20, nullable = false)
-private String accountId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "country_gen")
+    @SequenceGenerator(name = "country_gen", sequenceName = "country_seq", allocationSize = 50)
+    @Column(name = "id")
+    private Long id;
 
-// String, nullable=true + length declared → @Size only
-@Size(max = 30, message = "{crm.customer.taxId.size}")
-@Caption(value = "Tax ID", messageCode = "crm.customer.taxId.caption")
-@Column(name = "tax_id", length = 30)
-private String taxId;
-
-// Non-String, nullable=false → @NotNull
-@NotNull(message = "{crm.customer.typeId.notNull}")
-@Caption(value = "Type", messageCode = "crm.customer.typeId.caption")
-@Column(name = "type_id", nullable = false)
-private Long typeId;    // FK to customer_type lookup table — enum migrated to lookup table
+    @NotBlank(message = "{country.code.notBlank}")
+    @Size(max = 30, message = "{country.code.size}")
+    @Caption(value = "Code", messageCode = "country.code")
+    @Column(name = "code", length = 30, nullable = false, unique = true)
+    private String code;
+    ...
+    public Country() { super(); }
+}
 ```
 
-**Validation message key format:** `{<module>.<entity>.<fieldName>.<constraintType>}`
-The `{...}` braces are required — Jakarta Validation looks them up in `ValidationMessages.properties`.
-`constraintType` = `notBlank` | `notNull` | `size`.
+- **`allocationSize` equals the migration's `INCREMENT BY`** (`JPA-007`).
+- **Annotation order on a field:** validation → `@Caption` → JPA.
+- **Validation:** `@NotBlank` + `@Size` for a required String, `@Size` for an optional one,
+  `@NotNull` for a required non-String. A primitive (`boolean`) needs no `@NotNull`.
+- **Message codes follow `holon-stack.md`: `<domain>.<field>`** (`country.code`,
+  `customer.legalName`), **not** `<module>.<entity>.<field>.caption`. Validation keys are
+  `{<domain>.<field>.<notBlank|notNull|size>}`.
+- **Categorical values** are a `Long <field>Id` FK to a lookup entity, never an enum.
+- **Associations** use `@Ignore` and `fetch = FetchType.LAZY`; expose the FK id as a field.
+- **Fields to skip:** `id` and the audit fields get no `@Caption` and no validation.
+- **Never remove or change an existing JPA annotation.**
 
-### 1d. Add `@Ignore` to excluded fields
+## Step 2 — The `*Model` interface
 
-```java
-import com.holonplatform.core.beans.Ignore;
-
-@Ignore
-@OneToMany(...)
-private List<Child> children = new ArrayList<>();
-
-@Ignore
-@ManyToOne(...)
-@JoinColumn(name = "owner_id")
-private Employee owner;
-```
-
-**Never remove JPA annotations** — the ORM layer must continue to work.
-
----
-
-## Step 2 — Create the `*Model` interface
-
-**Path:** `<entity-package>/model/<EntityName>Model.java`
+**Path:** the entity's own package.
 
 ```java
-package <entity.package>.model;
-
-import com.holonplatform.core.beans.BeanPropertySet;
-import com.holonplatform.core.datastore.DataTarget;
-import com.holonplatform.core.property.PathProperty;
-import com.holonplatform.core.property.PropertySet;
-// + type imports (BigDecimal, LocalDate, Instant, Long for lookup FKs...)
-
 @SuppressWarnings("rawtypes")
-public interface <EntityName>Model {
+public interface CountryModel {
 
-    /** Datastore target — matches @Table(name="...") on the entity */
-    DataTarget<String> TARGET = DataTarget.named("<table_name>");
+    BeanPropertySet<Country> PROPERTY_SET = BeanPropertySet.create(Country.class);
 
-    /** Full BeanPropertySet introspected from the annotated entity bean. */
-    BeanPropertySet<<EntityName>> PROPERTY_SET = BeanPropertySet.create(<EntityName>.class);
+    NumericProperty<Long> ID = PROPERTY_SET.propertyNumeric("id");
+    StringProperty CODE = PROPERTY_SET.propertyString("code");
+    NumericProperty<Integer> SORT_ORDER = PROPERTY_SET.propertyNumeric("sortOrder");
+    BooleanProperty ACTIVE = PROPERTY_SET.propertyBoolean("active");
 
-    // ── BaseEntity ────────────────────────────────────────────────────────────
-    PathProperty<Long>    ID         = PROPERTY_SET.property("id",        Long.class);
-    PathProperty<Instant> CREATED_AT = PROPERTY_SET.property("createdAt", Instant.class);
-    PathProperty<Instant> UPDATED_AT = PROPERTY_SET.property("updatedAt", Instant.class);
-
-    // ── <section> ─────────────────────────────────────────────────────────────
-    PathProperty<<Type>> <CONSTANT> = PROPERTY_SET.property("<fieldName>", <Type>.class);
-    // ... one per mapped field (SCREAMING_SNAKE_CASE matching the field name)
-
-    // ── Sub-sets ──────────────────────────────────────────────────────────────
-
-    /** Grid columns (≤ 6–8 for readability). */
-    PropertySet LISTING = PropertySet.builderOf(ID, <F1>, <F2>, ...).build();
-
-    /** Create / edit form fields — excludes read-only audit columns. */
-    PropertySet FORM = PropertySet.builderOf(<F1>, <F2>, ...).build();
+    /** Listing columns; carries the identifier, as the datastore requires. */
+    PropertySet LISTING = PropertySet.builderOf(ID, CODE, SORT_ORDER, ACTIVE).withIdentifier(ID).build();
+    /** Create and edit fields; no id and no audit columns. */
+    PropertySet FORM = PropertySet.builderOf(CODE, SORT_ORDER, ACTIVE).build();
 }
 ```
 
-**Constant naming:** SCREAMING_SNAKE_CASE matching the field name (`accountId` → `ACCOUNT_ID`).
-**Embedded paths:** use dot notation: `PROPERTY_SET.property("billingAddress.city", String.class)`.
-**Sub-sets:** use raw `PropertySet` (no type parameter).
+Use the typed constants (`NumericProperty`, `StringProperty`, `BooleanProperty`,
+`TemporalProperty`). A `BooleanProperty` has `eq(true)`, **not** `isTrue()`. Constants are
+`SCREAMING_SNAKE_CASE`; an embedded path is `"billingAddress.city"`. A `PropertySet` used with
+the datastore declares `.withIdentifier(ID)`.
 
----
+## Step 3 — Resource bundles
 
-## Step 3 — Create / update the resource bundles
-
-Both files live at `src/main/resources/`. **Append** new entries — never overwrite existing ones.
-
-### `messages.properties`
+**Append** to `src/main/resources/messages.properties` and `ValidationMessages.properties`;
+never overwrite another entity's keys.
 
 ```properties
-# ── Customer ──────────────────────────────────────────────────────────────────
-crm.customer.accountId.caption=Account ID
-crm.customer.name.caption=Name
-crm.customer.type.caption=Type
+# messages.properties
+country.code=Code
+country.sortOrder=Sort order
 ```
-
-Add the following to `application.properties` once (idempotent):
 ```properties
-spring.messages.basename=messages
+# ValidationMessages.properties
+country.code.notBlank=Code is required
+country.code.size=Code must be at most 30 characters
 ```
 
-### `ValidationMessages.properties`
+`spring.messages.basename=messages` belongs in `application.properties`; if that file does not
+exist yet, say so in the report instead of creating a partial one.
 
-```properties
-# ── Customer validation ───────────────────────────────────────────────────────
-crm.customer.accountId.notBlank=Account ID is required
-crm.customer.accountId.size=Account ID must be at most 20 characters
-crm.customer.name.notBlank=Name is required
-crm.customer.type.notNull=Type is required
-```
+## Step 4 — No repository
 
----
+**Do not create a Spring Data repository.** All reads and writes go through
+`BeanDatastoreHelper` (`holon-stack.md`: Spring Data is banned outside the holon-saas
+carve-out). Create a plain `JpaRepository` only for an entity the Holon datastore cannot map
+(holon-saas checklist section 6), with a `// FALLBACK: <reason>` comment, and never add a
+method to it (`JPA-033`).
 
-## Step 4 — Create the Repository
-
-The repository **must have zero custom methods**. All data-access logic lives in the service.
+## Step 5 — The service
 
 ```java
-package <entity.package>.domain;
-
-import <entity.package>.<Entity>;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-/**
- * Spring Data JPA repository for {@link <Entity>}.
- *
- * <p><strong>No custom query methods.</strong> All data-access logic is
- * implemented in {@link <Entity>Service} using Holon Platform's
- * {@code BeanDatastoreHelper} for writes and inherited repository methods for reads.
- * Adding query methods here is explicitly forbidden — use {@code Datastore} +
- * {@code <Entity>Model.PROPERTY_SET} in the service instead.
- */
-@Repository
-public interface <Entity>Repository extends JpaRepository<<Entity>, Long> {
-    // intentionally empty — see <Entity>Service for all data-access logic
-}
-```
-
----
-
-## Step 5 — Create the Service
-
-```java
-package <entity.package>.domain;
-
-import <entity.package>.<Entity>;
-import <entity.package>.model.<Entity>Model;
-import com.holonplatform.core.beans.BeanDatastoreHelper;
-import com.holonplatform.core.query.BeanProjection;
-import com.holonplatform.core.query.QueryFilter;
-import com.holonplatform.core.query.QuerySort;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-/**
- * Domain service for {@link <Entity>}.
- *
- * <p>Write operations delegate to {@link BeanDatastoreHelper}.
- * Paginated / scalar reads delegate to the Spring Data JPA repository.
- * Streaming reads use a lazy Holon Datastore cursor via {@code BeanProjection} —
- * they never return {@code PropertyBox}.
- *
- * <p>{@code @Transactional(readOnly = true)} at class level; write methods override
- * with a full read-write transaction.
- */
 @Service
-@Transactional(readOnly = true)
-public class <Entity>Service {
+public class CountryService {
 
-    private static final Logger log = LoggerFactory.getLogger(<Entity>Service.class);
+    private final BeanDatastoreHelper<Country> helper;
 
-    private final BeanDatastoreHelper<<Entity>> helper;
-    private final <Entity>Repository repository;
-
-    public <Entity>Service(com.holonplatform.core.datastore.Datastore datastore,
-                           <Entity>Repository repository) {
-        this.helper     = BeanDatastoreHelper.of(datastore, <Entity>.class);
-        this.repository = repository;
+    public CountryService(Datastore datastore) {
+        this.helper = BeanDatastoreHelper.of(BeanDatastore.of(datastore), Country.class);
     }
 
-    // ── Read operations (JPA repository — scalar / paginated) ─────────────────
-
-    public Optional<<Entity>> findById(Long id) {
-        return repository.findById(id);
+    @Transactional(readOnly = true)
+    public Stream<Country> findActive() {
+        return helper.findAll(CountryModel.ACTIVE.eq(true), CountryModel.SORT_ORDER.asc());
     }
 
-    /** Do not use on large tables — prefer {@link #findAll(Pageable)} or {@link #streamAll()}. */
-    public List<<Entity>> findAll() {
-        return repository.findAll();
-    }
-
-    public Page<<Entity>> findAll(Pageable pageable) {
-        return repository.findAll(pageable);
-    }
-
-    public long count() {
-        return repository.count();
-    }
-
-    // ── Streaming read operations (Holon Datastore — lazy, server-side) ───────
-
-    /**
-     * Stream all entities as actual bean instances using a lazy server-side cursor.
-     * The result set is <strong>never loaded into heap</strong>.
-     *
-     * <p><strong>Lazy-loading rules:</strong>
-     * <ul>
-     *   <li>The caller must be inside an active {@code @Transactional} context.</li>
-     *   <li>Always close the stream with try-with-resources — the cursor holds a
-     *       database connection until closed.</li>
-     * </ul>
-     *
-     * @return a lazy {@code Stream<<Entity>>} — close after use
-     */
-    public Stream<<Entity>> streamAll() {
-        return helper.getDatastore()
-                .query(<Entity>Model.TARGET)
-                .stream(BeanProjection.of(<Entity>.class));
-    }
-
-    /**
-     * Stream entities matching a filter/sort as actual bean instances.
-     * Same lazy-loading rules as {@link #streamAll()}.
-     *
-     * @param filter Holon query filter (e.g. {@code <Entity>Model.ACTIVE.eq(true)})
-     * @param sort   Holon query sort   (e.g. {@code <Entity>Model.NAME.asc()})
-     * @return a lazy {@code Stream<<Entity>>} — close after use
-     */
-    public Stream<<Entity>> stream(QueryFilter filter, QuerySort sort) {
-        return helper.getDatastore()
-                .query(<Entity>Model.TARGET)
-                .filter(filter)
-                .sort(sort)
-                .stream(BeanProjection.of(<Entity>.class));
-    }
-
-    // ── Write operations ──────────────────────────────────────────────────────
-
-    @Transactional
-    public <Entity> save(<Entity> entity) {
-        log.info("Saving <entity>: {}", entity.<descriptiveField>());
-        return helper.save(entity).getResult().orElse(entity);
+    @Transactional(readOnly = true)
+    public Optional<Country> findByCode(String code) {
+        return helper.findFirst(CountryModel.CODE.eq(code));
     }
 
     @Transactional
-    public void delete(<Entity> entity) {
-        log.info("Deleting <entity> id={}", entity.getId());
-        helper.delete(entity);
+    public Country save(Country country) {
+        return helper.save(country).getResult().orElse(country);
     }
 
     @Transactional
-    public void deleteById(Long id) {
-        log.info("Deleting <entity> id={}", id);
-        findById(id).ifPresent(helper::delete);
-    }
+    public void delete(Country country) { helper.delete(country); }
 }
 ```
 
-**Log field:** replace `<descriptiveField>()` with the most readable field (`getName()`,
-`getCode()`, `getTitle()`, etc.). If none exists, use `entity.getId()`.
+Imports: `com.holonplatform.core.datastore.Datastore`,
+`com.holonplatform.core.datastore.beans.BeanDatastore`,
+`com.holonplatform.core.datastore.beans.BeanDatastoreHelper` (**not**
+`com.holonplatform.core.beans.…`).
 
----
+Rules:
 
-## Step 6 — Compile gate
+- **Constructor injection only.** The `Datastore` is a Spring bean; never `Context.get()`.
+- **Transaction boundary is the service method.** Reads `@Transactional(readOnly = true)`,
+  writes `@Transactional`; no `@Transactional` on a view (`JPA-038`).
+- **`BeanDatastoreHelper` has no sort-only `findAll`.** To sort without filtering, pass a
+  filter every row passes: `findAll(Model.ID.isNotNull(), Model.NAME.asc())`.
+- **A `Stream` is lazy**: the caller must be inside a transaction and close it with
+  try-with-resources (`JPA-035`, `JPA-036`). Never `.toList()` in a UI fetch callback.
+- **Never return `PropertyBox`.** Log every write at `INFO` with a readable field.
+- **Writes go through `helper.save/insert/update/delete`**, never `repository.save()` (`JPA-040`).
+- Hand-written queries use the `*Model` constants, not strings.
 
-Run:
-```
-./mvnw compile
-```
-Fix **every** compile error before moving to the next entity.
-
-| Common error | Fix |
-|---|---|
-| `cannot find symbol: BeanDatastoreHelper` | Import `com.holonplatform.core.datastore.beans.BeanDatastoreHelper` |
-| `cannot find symbol: Datastore` | Import `com.holonplatform.core.datastore.Datastore` (not Spring's `DataSource`) |
-| `No qualifying bean of type 'Datastore'` | Ensure `holon-starter-vaadin-flow-saas` is on the classpath |
-| `findAll(Pageable)` not found | Import `org.springframework.data.domain.Pageable` |
-
----
-
-## Step 7 — Repeat for `@Embeddable` classes
-
-For embedded value objects (like `Address`, `Money`):
-- Add `@Caption` and `@Size` / `@NotBlank` to each field inside the `@Embeddable`
-- Add the new keys to both resource bundles
-- The embedding entity needs **no changes** — Holon flattens the nested bean automatically
-
----
-
-## Lazy-loading and streaming rules (must follow — never violate)
-
-| Method | Backing API | Loads into heap? | Returns | Use when |
-|---|---|---|---|---|
-| `findById(id)` | JPA repo | single row | `Optional<Entity>` | looking up one record |
-| `findAll()` | JPA repo | **all rows** | `List<Entity>` | small tables only |
-| `findAll(Pageable)` | JPA repo | one page | `Page<Entity>` | paginated grids |
-| `streamAll()` | Holon Datastore | **lazy cursor** | `Stream<Entity>` | large tables, exports |
-| `stream(filter, sort)` | Holon Datastore | **lazy cursor** | `Stream<Entity>` | filtered bulk reads |
-
-1. **Keep the transaction alive** for the full lifetime of the stream — annotate the *calling*
-   method with `@Transactional(readOnly = true)`.
-2. **Always close streams** — use try-with-resources; the cursor holds a database connection.
-3. **`findAll()` on large tables is forbidden** — use `findAll(Pageable)` or `streamAll()`.
-4. **`PropertyBox` is never returned from service methods** — `BeanProjection.of(Entity.class)`
-   maps each row directly to a typed entity instance.
-
----
-
-## Adding custom queries to the service (when needed)
-
-When a use case requires a query that the inherited repository methods cannot cover, add it
-directly to the service using the `*Model` interface. **Never add custom methods to the repository.**
+## Step 6 — The mapping test
 
 ```java
-// Server-side filtered query using the Holon Datastore (preferred for large data sets)
-// Return Stream<T> — lazy cursor; caller (e.g. a UI fetch callback) must close it.
-public Stream<Customer> findActiveByTier(Customer.Tier tier) {
-    return stream(
-        CustomerModel.ACTIVE.eq(true).and(CustomerModel.TIER.eq(tier)),
-        CustomerModel.NAME.asc());
+class CountryMappingTest {
+    @Test
+    void countryIsSafeForTheHolonDatastore() {
+        HolonEntityMappingValidator.assertValid(Country.class);   // com.holonplatform.multitenant.testing
+    }
+    // plus: the property set contains every mapped field; LISTING has the identifier; FORM does not.
 }
 ```
 
----
+This is the build-time version of the holon-saas checklist: it catches a missing setter, a
+non-public constructor or an `@ElementCollection` that would otherwise fail, or silently drop
+rows, at runtime.
+
+## Step 7 — Compile and test gate
+
+```
+mvn -q compile        # or ./mvnw compile when the project has a wrapper
+mvn -q test
+```
+
+Fix every error before the next entity. Common ones:
+
+| Error | Fix |
+|---|---|
+| `cannot find symbol: BeanDatastoreHelper` | import `com.holonplatform.core.datastore.beans.BeanDatastoreHelper` |
+| `findAll(QuerySort)` not applicable | no sort-only overload; see Step 5 |
+| `isTrue()` not found on `BooleanProperty` | use `eq(true)` |
+| tests fail at start with `IllegalAccessError … KotlinReflectionUtils` | mixed JUnit versions; import `org.junit:junit-bom` (see `holon-stack.md`, Parent POM) |
+| `No qualifying bean of type 'Datastore'` | the holon-saas / Holon JPA starter is missing from the classpath |
+
+A clean compile does not prove the SQL: also load the migrations (see the
+`flyway-migration` skill), and say in the report what was **not** run (a real database,
+PostgreSQL, the service itself).
+
+## Step 8 — Repeat for `@Embeddable` classes
+
+Add `@Caption` and validation to each field inside the `@Embeddable`, and its keys to both
+bundles. The embedding entity needs no change; Holon flattens the nested bean.
 
 ## Constraints
 
-- **Never remove or change JPA annotations** — the JPA persistence layer must keep working.
-- **Zero custom methods in the repository** — all query logic lives in the service.
-- **All writes go through `BeanDatastoreHelper`** — never call `repository.save()` for writes.
-- **One `*Model` interface** per entity, in `<entity-package>.model`.
-- **One `*Repository` + one `*Service`** per entity, both in `<entity-package>.domain`.
-- **`@Transactional(readOnly = true)`** at class level; **`@Transactional`** on each write method.
-- **Log every write** at `INFO` level with a meaningful field (name, number, code…).
-- **No separate `Datastore` field** — use `helper.getDatastore()` to keep the constructor lean.
-- **Append** to resource bundles — never overwrite entries from other entities.
-- **Compile gate** — build must be clean after every entity conversion.
-- **Never name a business field `version`** — `BaseEntity` declares `@Version Long version` and
-  Lombok will generate a conflicting `getVersion(): Long`. Use descriptive names like
-  `revisionLabel` or `schemaVersion` for business-version strings.
-- **Primitives** (`boolean active`) cannot be null — no `@NotNull` needed; skip validation.
-- **`BaseEntity` fields** (`id`, `createdAt`, `updatedAt`, `version`) — no `@Caption` or validation.
-- **FK-object references** (`@ManyToOne`) — `@Ignore` only; expose the FK `Long` id via a separate
-  `PathProperty<Long>` constant in the model if Datastore filtering by FK is needed.
-
----
-
-## Full example: `Customer`
-
-### Annotated field (order: validation → @Caption → JPA):
-```java
-@NotBlank(message = "{crm.customer.accountId.notBlank}")
-@Size(max = 20, message = "{crm.customer.accountId.size}")
-@Caption(value = "Account ID", messageCode = "crm.customer.accountId.caption")
-@Column(name = "account_id", length = 20, nullable = false, unique = true, updatable = false)
-private String accountId;
-```
-
-### `CustomerModel.java`
-```java
-package com.iyensoft.crm.model;
-
-@SuppressWarnings("rawtypes")
-public interface CustomerModel {
-    DataTarget<String>      TARGET      = DataTarget.named("customer");
-    BeanPropertySet<Customer> PROPERTY_SET = BeanPropertySet.create(Customer.class);
-    PathProperty<Long>      ID          = PROPERTY_SET.property("id",        Long.class);
-    PathProperty<String>    ACCOUNT_ID  = PROPERTY_SET.property("accountId", String.class);
-    PathProperty<String>    NAME        = PROPERTY_SET.property("name",      String.class);
-    PathProperty<CustomerType> TYPE     = PROPERTY_SET.property("type",      CustomerType.class);
-    PropertySet LISTING = PropertySet.builderOf(ID, ACCOUNT_ID, NAME, TYPE).build();
-    PropertySet FORM    = PropertySet.builderOf(ACCOUNT_ID, NAME, TYPE).build();
-}
-```
-
-### `CustomerRepository.java`
-```java
-package com.iyensoft.crm.domain;
-
-@Repository
-public interface CustomerRepository extends JpaRepository<Customer, Long> {
-    // intentionally empty
-}
-```
-
-### `CustomerService.java` (key methods)
-```java
-package com.iyensoft.crm.domain;
-
-@Service
-@Transactional(readOnly = true)
-public class CustomerService {
-    private static final Logger log = LoggerFactory.getLogger(CustomerService.class);
-    private final BeanDatastoreHelper<Customer> helper;
-    private final CustomerRepository repository;
-
-    public CustomerService(Datastore datastore, CustomerRepository repository) {
-        this.helper     = BeanDatastoreHelper.of(datastore, Customer.class);
-        this.repository = repository;
-    }
-
-    public Stream<Customer> streamAll() {
-        return helper.getDatastore()
-                .query(CustomerModel.TARGET)
-                .stream(BeanProjection.of(Customer.class));
-    }
-
-    @Transactional
-    public Customer save(Customer customer) {
-        log.info("Saving customer: {}", customer.getName());
-        return helper.save(customer).getResult().orElse(customer);
-    }
-
-    @Transactional
-    public void deleteById(Long id) {
-        log.info("Deleting customer id={}", id);
-        findById(id).ifPresent(helper::delete);
-    }
-}
-```
-
-### `messages.properties` (append)
-```properties
-crm.customer.accountId.caption=Account ID
-crm.customer.name.caption=Name
-crm.customer.type.caption=Type
-```
-
-### `ValidationMessages.properties` (append)
-```properties
-crm.customer.accountId.notBlank=Account ID is required
-crm.customer.accountId.size=Account ID must be at most 20 characters
-crm.customer.name.notBlank=Name is required
-crm.customer.type.notNull=Type is required
-```
-
----
+- **Guardrail gate:** zero 🛑 findings, every ⚠️ waived inline, the report printed; a clean
+  compile alone is not enough.
+- **Every association explicitly `FetchType.LAZY`** (`JPA-001`); no `CascadeType.ALL`/`REMOVE`
+  on the many side (`JPA-002`).
+- **No `@Enumerated`, no Java enum for a domain value** — a lookup-table FK (`JPA-005`).
+- **Every entity has `@Version`** (inherited from the audit base class) and uses `Instant`
+  (`JPA-012`, `JPA-008`).
+- **No Lombok `@Data` / `@EqualsAndHashCode` / `@ToString` on an entity** (`JPA-020`).
+- **No repository** unless the datastore cannot map the entity, and then with a `FALLBACK` comment.
+- **All writes through `BeanDatastoreHelper`.**
+- **One `*Model` and one `*Service` per entity, in the entity's own feature package.**
+- **Append** to resource bundles; never overwrite.
+- **Do not name a business field `version`** — the audit base class owns it.
+- **Never remove or change an existing JPA annotation.**
 
 ## Type and import reference
 
-| Type / Annotation | Package | Purpose |
-|---|---|---|
-| `@Caption(value, messageCode)` | `com.holonplatform.core.i18n` | UI label + I18N key |
-| `@Ignore` | `com.holonplatform.core.beans` | Exclude field from BeanPropertySet |
-| `@NotBlank(message)` | `jakarta.validation.constraints` | Non-null, non-empty String |
-| `@NotNull(message)` | `jakarta.validation.constraints` | Non-null value |
-| `@Size(max, message)` | `jakarta.validation.constraints` | Max string length |
-| `BeanPropertySet<T>` | `com.holonplatform.core.beans` | PropertySet from bean introspection |
-| `PathProperty<V>` | `com.holonplatform.core.property` | Typed property reference |
-| `PropertySet` (raw) | `com.holonplatform.core.property` | For LISTING / FORM sub-sets |
-| `DataTarget` | `com.holonplatform.core.datastore` | Datastore target (table name) |
-| `BeanDatastoreHelper<T>` | `com.holonplatform.core.datastore.beans` | Holon write delegate |
-| `BeanProjection` | `com.holonplatform.core.query` | Maps Datastore rows to bean instances |
-| `QueryFilter` | `com.holonplatform.core.query` | Typed filter for streaming queries |
-| `QuerySort` | `com.holonplatform.core.query` | Typed sort for streaming queries |
+| Type / annotation | Package |
+|---|---|
+| `@Caption(value, messageCode)` | `com.holonplatform.core.i18n` |
+| `@Ignore` | `com.holonplatform.core.beans` |
+| `@NotBlank`, `@NotNull`, `@Size` | `jakarta.validation.constraints` |
+| `BeanPropertySet<T>` | `com.holonplatform.core.beans` |
+| `NumericProperty`, `StringProperty`, `BooleanProperty`, `PropertySet` | `com.holonplatform.core.property` |
+| `Datastore` | `com.holonplatform.core.datastore` |
+| `BeanDatastore`, `BeanDatastoreHelper` | `com.holonplatform.core.datastore.beans` |
+| `QueryFilter`, `QuerySort` | `com.holonplatform.core.query` |
+| `HolonEntityMappingValidator` | `com.holonplatform.multitenant.testing` (holon-saas `tenant-core`) |
+| `@CreatedBy`, `@CreatedDate`, `@LastModifiedBy`, `@LastModifiedDate` | `org.springframework.data.annotation` (audit base class only) |
+| `AuditingEntityListener` | `org.springframework.data.jpa.domain.support` (audit base class only) |

@@ -34,6 +34,14 @@ A use case is the unit of work, not a view. A single use case may produce one vi
 - JPA `EntityManager` / Spring Data `Repository` for queries — use `Datastore` only.
 - Spring Security annotations/classes for auth logic — use Holon Security only.
 - Plain `PropertyBox` as the primary data carrier when a typed bean already exists — use the bean + `BeanPropertySet`.
+- **JPA anti-patterns** — see [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md). A view is where three of them usually appear, and all three are 🛑 blockers:
+  - `JPA-031` — `findAll()` inside a listing fetch callback. Use `svc.findSlice(q.getOffset(), q.getLength(), …)`.
+  - `JPA-030` — dereferencing a lazy association inside a renderer / loop over grid rows (N+1, or `LazyInitializationException` once the transaction has closed). Project the needed fields into the bean instead.
+  - `JPA-038` — `@Transactional` on a `@Route` class. Transactions belong in the service.
+  Additionally, `JPA-035`/`JPA-036`: any lazy `Stream<T>` handed to a fetch callback must be consumed inside `@Transactional(readOnly = true)` and closed with try-with-resources.
+
+> Run the guardrail protocol from [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md)
+> before emitting each view, and print the guardrail report (or `✅ clean`) in the final summary.
 
 > If you are unsure whether a class belongs to raw Vaadin or to Holon Platform Vaadin UI, check the package:
 > `com.holonplatform.vaadin.*` ✅ &nbsp;&nbsp; `com.vaadin.*` directly ⛔
@@ -59,7 +67,7 @@ Every entity that needs a UI **must** be implemented as exactly two views. Let t
 > `MasterDetailLayout` + `Sheet` below) prefer the component responsive APIs. For complex
 > responsive behaviour (fine-grained breakpoints, spacing, column counts, hide/show) use plain
 > CSS `@media` queries and styles in `src/main/resources/META-INF/resources/styles.css`. See
-> `implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
+> `../implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
 
 ### View 1 — List View (`<Entity>ListView`)
 

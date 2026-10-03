@@ -1,8 +1,8 @@
 # Holon Vaadin Flow — Component Dictionary (Real API)
 
 > **Source of truth**: derived directly from the Holon Vaadin Flow library source at
-> `com.holonplatform.vaadin.flow.vaadinplus.components.*` (verified August 2026).
-> Every snippet below compiles against the real library. Do **not** invent methods.
+> `com.iyensoft.vaadin.flow.components.*` (audited October 2026).
+> The snippets were derived from the source, **not compiled**; the "Verified corrections" table below lists the ones known to be wrong. Do **not** invent methods: check the library source or `javap`.
 
 Skills MUST consult this file when choosing a component. If a Holon component exists for
 the job, use it. If **no Holon component exists**, **stop immediately and ask the developer**
@@ -17,6 +17,29 @@ what component or approach to use — do not silently emit raw Vaadin.
 
 ---
 
+## Verified corrections (read before copying a snippet below)
+
+The catalogue was checked against the library source (`holon-vaadin-flow`, `iyen-core`) by reading it; no snippet was compiled. Where a snippet below disagrees with this table, **this table wins**.
+
+| Snippet uses | The library has | Source |
+|---|---|---|
+| package `com.holonplatform.vaadin.flow.vaadinplus.components.*` | `com.iyensoft.vaadin.flow.components.*` (module `iyen-core`); builders in `…components.builders`. Only `Input`, `ButtonBuilder`, `NotificationBuilder`, `NotificationUtil`, `FormLayoutBuilder`, `ViewMode`, `ButtonPreset`, `KanbanBoard` stay in `com.holonplatform.vaadin.flow.components` (module `holon-vaadin-flow`) | `iyen-core/src/main/java/com/iyensoft/vaadin/flow/components` |
+| `EntityPanelForm` | `EntityFormPanel<T>`, entry point `EntityFormPanel.bean(Class)`; instance methods `setBean`, `getBean()`, `getBean(boolean)`, `validate()` | `EntityFormPanel.java` |
+| `ListingBundle.builder(...)` | no static `builder`; use `Components.listing(Class)`, which returns a `ListingBundleBuilder` | `Components.java` |
+| `Input.singleSelect(Long.class).items(list, Entity::getId, Entity::getName)` | only `items(Iterable)` and `items(ITEM...)`; set the label with `itemLabelGenerator(Function)` | `HasItemsConfigurator` |
+| `.allowCustomValues(true)` | `.allowCustomValue(boolean)` | `FilterableSingleSelectConfigurator` |
+| `.onCustomValueSet(v -> …)` | `.withCustomValueSetListener(CustomValueSetListener)`; the event has `getCustomValue()` | `FilterableSingleSelectConfigurator` |
+| `input.refresh(items, idFn, nameFn)` | no `refresh` on `Input` or the select builder | — |
+| `EntityFormPanel…required(String, Localizable)` | `required(String, String)` only | `EntityFormPanel.BeanBuilder` |
+| `title(Localizable)` / `draftBadge(Localizable)` on `EntityCreationForm`; `title` / `subtitle` on `FormStepCard` | `String` only (`subtitle` also takes a `Component`) | `EntityCreationFormConfigurator`, `FormStepCardConfigurator` |
+| `new Tag(VaadinIcon, Localizable)` | constructors `(VaadinIcon, String[, Color.Text])` and `(Component, Localizable)` | `Tag.java` |
+| `NotificationUtil.notificationSuccess/Error(Localizable)` | `String` (or `ValidationException`) only | `NotificationUtil` |
+| `Components.appShell().navbarBrand(Localizable)` | `String` only | `AppShellLayoutConfigurator` |
+| `Components.input.*`, `BooleanProperty.isTrue()` | neither exists; use `Input.string()` etc. and `BooleanProperty.eq(true)` | — |
+| `holon-starter-vaadin-flow` brings the components | it does **not** bring `iyen-core`; declare `com.iyensoft.vaadin:iyen-core` | `holon-saas` / app `pom.xml` |
+
+**Not in the library** (no builder found): file or photo upload, signature capture, tree, print or PDF export, and a documented date-range picker (a `DateRangeField` exists only in an `internal` package). For these the rule below applies: stop and ask the developer.
+
 ## Package map
 
 | Concern | Class / entry point |
@@ -29,23 +52,23 @@ what component or approach to use — do not silently emit raw Vaadin.
 | Notification builder | `com.holonplatform.vaadin.flow.components.builders.NotificationBuilder` |
 | Notification shortcuts | `com.holonplatform.vaadin.flow.components.utils.NotificationUtil` |
 | Data grid / listing | `Components.listing(T.class)` → `ListingBundleBuilder<T>` |
-| Entity form (bean) | `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel` |
+| Entity form (bean) | `com.iyensoft.vaadin.flow.components.EntityFormPanel` |
 | Multi-step creation page | `Components.entityCreationForm()` + `Components.formStepCard()` |
 | Multi-step wizard panel | `WizardFrame.builder()` → `WizardFrame` |
 | Inline progress stepper | `Components.stepper()` → `FlowStepper` |
-| Confirmation dialog | `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog` |
+| Confirmation dialog | `com.iyensoft.vaadin.flow.components.AlertDialog` |
 | Modal alert notification | `Components.alertModal()` → `AlertModal` |
-| Inline alert | `com.holonplatform.vaadin.flow.vaadinplus.components.Alert` |
+| Inline alert | `com.iyensoft.vaadin.flow.components.Alert` |
 | Empty state | `Components.empty()` → `Empty` |
 | Slide-in panel | `Components.sheet()` → `Sheet` |
 | Application shell | `Components.appShell()` → `AppShellLayout` |
-| App bar (top navigation) | `com.holonplatform.vaadin.flow.vaadinplus.components.AppBar` |
+| App bar (top navigation) | `com.iyensoft.vaadin.flow.components.AppBar` |
 | Page header | `Components.header(title)` → `Header` |
 | Page footer | `Components.footer()` → `Footer` |
 | Grid / list header | `Components.gridHeader(title)` → `GridHeader` |
 | Breadcrumb navigation | `Components.breadcrumb()` → `Breadcrumb` |
 | Side nav builder | `com.iyensoft.vaadin.flow.components.builders.SideNavBuilder` |
-| Responsive layout | `com.holonplatform.vaadin.flow.vaadinplus.ResponsiveDiv` |
+| Responsive layout | `com.iyensoft.vaadin.flow.components.ResponsiveDiv` |
 | Master-detail | `Components.masterDetail(T.class)` → `MasterDetailLayout<T>` |
 | Separator / divider | `Components.separator()` → `Separator` |
 | Status pill badge | `Components.statusBadge(label, variant)` → `StatusBadge` |
@@ -296,7 +319,7 @@ var layout = FormLayoutBuilder.create()
 
 ### 8 · EntityFormPanel (entity form / CRUD)
 
-> **Class name**: `EntityFormPanel` — from `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel`  
+> **Class name**: `EntityFormPanel` — from `com.iyensoft.vaadin.flow.components.EntityFormPanel`  
 > **Not** `EntityPanelForm`. **Not** `EntityFormPanel.builder(...)`. Entry point: `EntityFormPanel.bean(MyBean.class)`.
 
 ```java
@@ -418,7 +441,7 @@ NotificationBuilder.create()
 ### 12 · Confirmation dialog
 
 ```java
-// com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog
+// com.iyensoft.vaadin.flow.components.AlertDialog
 AlertDialog.builder()
     .title(Localizable.of("Discard changes?",                "crm.dialog.discard.title"))
     .description(Localizable.of("All unsaved changes will be lost.", "crm.dialog.discard.description"))
@@ -439,7 +462,7 @@ Focus is restored automatically on close — satisfies A11Y dialog requirement.
 ### 13 · Inline alert
 
 ```java
-// com.holonplatform.vaadin.flow.vaadinplus.components.Alert
+// com.iyensoft.vaadin.flow.components.Alert
 Alert alert = Alert.builder(Alert.Variant.WARNING)
     .title(Localizable.of("Unsaved changes",                       "crm.alert.unsaved.title"))
     .description(Localizable.of("Changes will be lost if you navigate away.", "crm.alert.unsaved.description"))
@@ -476,7 +499,7 @@ public class MainLayout extends AppLayout {
             .withNavItem(Localizable.of("Settings",  "nav.settings"),  SettingsView.class,     VaadinIcon.COG.create()).add()
             .buildWrapper();
 
-        var shell = Components.appShell()                       // → AppShellLayout (com.holonplatform.vaadin.flow.vaadinplus.components)
+        var shell = Components.appShell()                       // → AppShellLayout (com.iyensoft.vaadin.flow.components)
             .navbarBrand(Localizable.of("MiniCRM", "app.brand"), "v1.0")
             .nav(nav)
             .build();
@@ -546,7 +569,7 @@ All keys must exist in `src/main/resources/messages.properties`.
 
 ### 15 · HeroStrip — gradient header card with tags and metric cells
 
-> Class: `com.holonplatform.vaadin.flow.vaadinplus.components.HeroStrip`  
+> Class: `com.iyensoft.vaadin.flow.components.HeroStrip`  
 > Builder: `com.holonplatform.vaadin.flow.components.builders.HeroStripBuilder`  
 > Entry point: `Components.heroStrip()` or `HeroStripBuilder.create()`
 
@@ -581,7 +604,7 @@ HeroStrip strip = Components.heroStrip()
 
 ### 16 · ArAgingBar — proportional multi-segment bar card
 
-> Class: `com.holonplatform.vaadin.flow.vaadinplus.components.ArAgingBar`  
+> Class: `com.iyensoft.vaadin.flow.components.ArAgingBar`  
 > Builder: `com.holonplatform.vaadin.flow.components.builders.ArAgingBarBuilder`  
 > Entry point: `ArAgingBarBuilder.create()` or `ArAgingBarBuilder.create(ArAgingBar.Variant)`
 
