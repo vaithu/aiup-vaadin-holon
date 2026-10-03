@@ -59,6 +59,36 @@ first.
 | Datastore Test | `/datastore-test UC-XXX` | use case spec | JUnit 5 + Testcontainers integration tests |
 | Holon Vaadin Test | `/holon-vaadin-test UC-XXX` | use case spec | Vaadin Browserless server-side tests |
 | Playwright Test | `/playwright-test UC-XXX` | use case spec | Browser E2E tests |
+| Traceability Sensors | `/traceability-sensors` | `docs/use_cases/`, `docs/test_cases/`, `docs/business_rules.md` | `@UseCase` / `@TestCase` annotations + three JUnit sensors that read `docs/` from disk |
+| Architecture Rules | `/architecture-rules` | `rules/holon-stack.md` | `ArchitectureTest` (ArchUnit) + test-layer and source-level convention sensors, plus `@Fallback` |
+| Coverage Check | `/coverage-check UC-XXX` | use case spec + its tests | An audit verdict per flow — run before raising `Status:` to `Done` |
+| Session Guards | `/session-guards` | the installed sensor classes | `.claude/hooks/` + `.claude/settings.json` (needs Git Bash + `jq`) |
+
+---
+
+## The harness
+
+The skills above fall into four layers, each answering a different question:
+
+| Layer | Question | Parts |
+|-------|----------|-------|
+| **Guides** | What should the agent do? | `CLAUDE.md`, `docs/`, the 4+1 views, the ADRs, `rules/holon-stack.md` |
+| **Sensors** | Does the repo still agree with the guides? | `/traceability-sensors`, `/architecture-rules` |
+| **Guards** | Did this session actually run the sensors? | `/session-guards` |
+| **Backstop** | Does it hold for everybody else? | `mvn verify` in CI (`traceability-sensors/references/ci.md`) |
+
+The dividing line, and where a new rule belongs, is in **`rules/harness.md`**:
+
+> If a rule can be checked by reading the repository, it is a test.
+> Only a rule about what happened during a session is a hook.
+
+**`**Status:** Done` is an executable assertion**, not a label — it switches the
+coverage sensor on for that use case. Referential integrity is checked for every
+spec; coverage only for specs claiming completion.
+
+**Test names carry traceability:** `UC<NNN><Name>Test` (Surefire),
+`UC<NNN><Name>IT` and `TC<NNN><Name>IT` (Failsafe). `mvn -q test -Dgroups=sensor`
+runs the sensors in seconds, with no Docker.
 
 ---
 
@@ -171,6 +201,19 @@ src/main/resources/db/migration/
 ## Project structure (skills write here)
 
 ```
+docs/
+├── requirements.md
+├── entity_model.md
+├── business_rules.md         ← GR-NNN shared rules (/business-rules)
+├── use_cases/UC-NNN-*.md
+├── test_cases/TC-NNN-*.md
+├── architecture/             ← 4+1 views (/architecture-views)
+└── adr/ADR-NNN-*.md          ← decisions (/adr)
+
+.claude/
+├── settings.json             ← wires the hooks (/session-guards)
+└── hooks/                    ← bash guards + smoke.sh
+
 src/
 ├── main/
 │   ├── java/com/example/
@@ -182,9 +225,11 @@ src/
 │       └── db/migration/    ← Flyway V*.sql
 └── test/
     ├── java/com/example/
+    │   ├── traceability/    ← @UseCase, @TestCase, SpecDocuments + 3 sensors
+    │   ├── architecture/    ← ArchitectureTest + convention sensors, @Fallback
     │   ├── datastore/       ← JUnit 5 + Testcontainers integration tests
-    │   ├── ui/              ← Vaadin Browserless tests
-    │   └── e2e/             ← Playwright tests
+    │   ├── ui/              ← Vaadin Browserless tests (UC<NNN>…Test)
+    │   └── e2e/             ← Playwright tests (TC<NNN>…IT)
     └── resources/
         └── db/migration/    ← test-only Flyway seed migrations
 ```

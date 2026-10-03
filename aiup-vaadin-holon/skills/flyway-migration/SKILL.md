@@ -57,6 +57,16 @@ Key constraints for this skill:
   SQL Server 2019+) when sequences are not available — never `SERIAL` / `BIGSERIAL`
 - Use `CURRENT_TIMESTAMP` (standard SQL) instead of `now()` for default timestamp values
 - Do NOT drop existing tables without explicit user confirmation
+- **JPA schema anti-patterns** — see [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md).
+  Flyway owns the schema, so:
+  - `JPA-051` — the app must run with `spring.jpa.hibernate.ddl-auto=validate` (or `none`);
+    if the config says `create` / `create-drop` / `update`, flag it and fix it as part of this task.
+  - `JPA-007` — a sequence's `INCREMENT BY` MUST equal the entity's
+    `@SequenceGenerator(allocationSize = …)`. Mismatched values silently corrupt id allocation.
+  - `JPA-008` — timestamp columns backing an `Instant` field use `TIMESTAMPTZ`
+    (`TIMESTAMP WITH TIME ZONE`), never a naive `TIMESTAMP`.
+  - `JPA-005` — every categorical/status value gets its own lookup table + FK; never a
+    `VARCHAR` mirroring a Java enum.
 
 ## Audit & Version Columns
 
@@ -84,6 +94,10 @@ columns, so they never shift the position of domain columns during schema review
 - [ ] Column names are `snake_case` of the corresponding JavaBean field name
 - [ ] `V001__auth_schema.sql` (or equivalent) is included for Holon Auth tables
 - [ ] Every entity table (not pure join tables) ends with `created_by`, `created_date`, `last_modified_by`, `last_modified_date`, `version`
+- [ ] Sequence `INCREMENT BY` matches the entity's `@SequenceGenerator(allocationSize = …)` (`JPA-007`)
+- [ ] Timestamp columns backing `Instant` fields are `TIMESTAMPTZ` (`JPA-008`)
+- [ ] Every categorical value has a lookup table + FK — no enum-mirroring `VARCHAR` columns (`JPA-005`)
+- [ ] `spring.jpa.hibernate.ddl-auto` is `validate` or `none` — Flyway owns the schema (`JPA-051`)
 
 ## File Naming Convention
 

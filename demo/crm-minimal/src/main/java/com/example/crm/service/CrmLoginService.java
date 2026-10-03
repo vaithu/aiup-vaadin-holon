@@ -3,6 +3,7 @@ package com.example.crm.service;
 import com.example.crm.domain.CrmAccount;
 import com.holonplatform.multitenant.TenantDetails;
 import com.holonplatform.multitenant.TenantDetailsLoader;
+import com.holonplatform.multitenant.resolver.SessionCachingTenantResolver;
 import com.holonplatform.multitenant.security.TenantUserDetails;
 import com.vaadin.flow.server.VaadinServletRequest;
 import com.vaadin.flow.server.VaadinServletResponse;
@@ -85,5 +86,14 @@ public class CrmLoginService {
         VaadinServletRequest request = (VaadinServletRequest) VaadinService.getCurrentRequest();
         VaadinServletResponse response = (VaadinServletResponse) VaadinService.getCurrentResponse();
         securityContextRepository.saveContext(context, request, response);
+
+        // Holon AuthContext (for the Vaadin navigator's route guards) is published globally by
+        // tenant-security's SpringSecurityAuthContextRegistrar, backed by this SecurityContext.
+
+        // Seed the session-cached tenant so plain in-app routes (no /t/{id}/ prefix) resolve this
+        // tenant on every later request: SessionCachingTenantResolver falls back to this value when
+        // the request URI carries no tenant prefix.
+        SessionCachingTenantResolver.cacheTenant(
+                request.getSession(true), tenant.tenantId().toLowerCase());
     }
 }

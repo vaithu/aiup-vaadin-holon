@@ -67,7 +67,7 @@ and `playwright-test` skills for that.
 ### Banned — refuse to emit
 
 - `com.holonplatform.core.property.PropertyBox` — use `Bean` + `BeanPropertySet` exclusively
-- `jakarta.persistence.*` / `javax.persistence.*` — unless Holon JPA Datastore is explicitly required and justified
+- `jakarta.persistence.*` / `javax.persistence.*` — unless Holon JPA Datastore is explicitly required and justified; when justified, run the [JPA anti-pattern guardrail](../../rules/jpa-anti-patterns.md) and emit zero 🛑 findings
 - `org.springframework.data.jpa.*`, `org.springframework.data.repository.*`
 - `org.springframework.web.bind.annotation.*` — no Spring MVC
 - `org.springframework.beans.factory.annotation.Autowired` — use constructor injection
@@ -76,6 +76,7 @@ and `playwright-test` skills for that.
 ## Pre-Emit Checklist
 
 - [ ] No `PropertyBox` in emitted code
+- [ ] **JPA anti-pattern guardrail** — any emitted JPA code or `spring.jpa.*` property scanned against [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md): zero 🛑 findings, every ⚠️ waived inline with `// JPA-WAIVER(<id>):`, guardrail report included in the final report
 - [ ] All classes (bean, model, service, view) in `com.example.<app>.<feature>` — no layer packages
 - [ ] Services use `BeanDatastoreHelper<T>`; `findSlice(offset, length, …)` used in every fetch callback — `findAll()` never called inside a fetch lambda
 - [ ] `<Entity>Model` interface with `public static final BeanPropertySet` and typed `PathProperty` constants
@@ -92,11 +93,14 @@ and `playwright-test` skills for that.
 - [ ] Auth guard: `@Authenticate` + `@RolesAllowed` on every `@Route`; `AuthContext.require().isPermitted(…)` in `beforeEnter` for action-level checks
 - [ ] Action buttons use `.primary()` / `.secondary()` / `.tertiary()` / `.error()` — never raw `ButtonVariant`
 - [ ] Notifications via `NotificationUtil.notificationSuccess/Error(…)` or `NotificationBuilder`
+- [ ] **AppBar defaults**: the shell has a working global search field, a notifications bell, a user avatar with a working Sign out action, and a language switcher (English + at least one additional locale) with two message bundles (`messages.properties` + `messages_<lang>.properties`) — see [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md); `.languages(...)`/`.user(...).menu(...)` render but do not wire clicks, so build working equivalents via `customizeEnd(...)`
 - [ ] Visual tokens in `src/main/resources/META-INF/resources/styles.css` — not hard-coded in Java
 - [ ] All `Instant` fields map to `TIMESTAMPTZ`; timezone captured in `MainLayout.onAttach` via `ExtendedClientDetails`; displayed timestamps formatted via `DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(sessionZone())`
 - [ ] Full compilation verified (`./mvnw compile` or `./gradlew compileJava`)
 - [ ] **File-set complete**: every file listed in "Emitted File Set (deterministic)" has been created — no file omitted
 - [ ] **No separate mobile view classes**: confirm zero `*Mobile*` or `*mobile*` class names exist in the emitted set; mobile behaviour is handled by responsive Holon components on the single desktop view class
+- [ ] **Demo data seeded** (`demo` Spring profile, `src/main/resources/db/demo-seed/V9NN__demo_seed_<entity>.sql`, 5–10 rows per entity mirroring the mockup's own sample names/numbers, plus at least one row per lookup table) — see [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md)
+- [ ] **Mandatory visual verification performed**: app run with the `demo` profile, `<Entity>ListView` and `<Entity>MasterDetailView` screenshotted with data loaded, compared region-by-region against the mockup and against the Emitted File Set's implied layout — no `Full`-fidelity region (master list, hero strip, tabs, forms) rendered empty/zeroed; screenshots + comparison notes attached to the final report
 
 ## Emitted File Set (deterministic)
 
@@ -183,6 +187,8 @@ derived from the reference implementation in `demo/crm-minimal/src/main/java/com
 25. **Timezone**: `MainLayout.onAttach` → `ExtendedClientDetails` → `ZoneId` stored in `VaadinSession`; `sessionZone()` helper used wherever timestamps are displayed
 26. Run the Pre-Emit Checklist — fix every violation before proceeding
 27. Verify full compilation
+28. **Seed demo data**: `demo` Spring profile + `src/main/resources/db/demo-seed/V9NN__*.sql` reusing the mockup's own sample entity names/numbers so the master list and detail hero are never empty during verification — see [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md)
+29. **Mandatory visual verification (blocking)**: run the app with the `demo` profile, screenshot `<Entity>ListView` and `<Entity>MasterDetailView` with data loaded, and compare region-by-region against the mockup using the html-to-holon-component-map's mapping table. A `Full`-fidelity region (master list rows, hero strip values, KPI numbers, tabs, forms) rendering empty is a regression — fix the seed data or the Datastore query and re-verify before reporting completion. `Manual`/out-of-scope regions (entities outside the current model, decorative gradients/animations) are **not** part of the completion bar — report them explicitly instead of chasing pixel-for-pixel equality
 
 ## Resources
 
@@ -198,7 +204,10 @@ derived from the reference implementation in `demo/crm-minimal/src/main/java/com
 - [`../implement/references/error-handling.md`](../implement/references/error-handling.md) — `ValidationException`, `DataAccessException`, optimistic-lock, global error views
 - [`../implement/references/audit-wiring.md`](../implement/references/audit-wiring.md) — `AuditUtil`, `AuditedBean`, audit field stamping
 - [`../implement/references/app-configuration.md`](../implement/references/app-configuration.md) — `application.yml`, BOM imports, JVM timezone flag
-- [`../implement/references/architecture.md`](../implement/references/architecture.md) — package-by-feature layout, co-location rules, ArchUnit enforcement
+- [`../implement/references/architecture.md`](../implement/references/architecture.md) — package-by-feature layout, co-location rules
+- [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md) — mandatory AppBar elements (search, notifications, user/sign-out menu, language switcher) and the two-locale i18n bundle + `LocalizationContext` wiring, ArchUnit enforcement
+- [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md) — mandatory demo data seeding + screenshot-based visual verification gate, and what "matching the mockup" does and doesn't mean
+- [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md) — JPA/Hibernate anti-pattern catalog + blocking guardrail protocol (run whenever JPA code is emitted)
 - If configured, use the Vaadin MCP server (`https://mcp.vaadin.com/docs`) for Vaadin 25 component docs
 - If configured, use the JavaDocs MCP server (`https://www.javadocs.dev/mcp`) for Holon Platform API
 - See [`../../rules/mcp-servers.md`](../../rules/mcp-servers.md) to configure MCP servers

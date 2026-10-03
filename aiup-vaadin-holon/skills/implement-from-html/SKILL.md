@@ -55,7 +55,7 @@ confirmation before proceeding.
 ### Banned — refuse to emit
 
 - `com.holonplatform.core.property.PropertyBox` — **use `Bean` + `BeanPropertySet` exclusively**
-- `jakarta.persistence.*` / `javax.persistence.*` — unless Holon JPA Datastore is explicitly required and justified
+- `jakarta.persistence.*` / `javax.persistence.*` — unless Holon JPA Datastore is explicitly required and justified; when justified, the [JPA anti-pattern guardrail](../../rules/jpa-anti-patterns.md) is mandatory and no 🛑 finding may be emitted
 - `org.springframework.data.jpa.*`, `org.springframework.data.repository.*`
 - `org.springframework.web.bind.annotation.*` (no Spring MVC — Vaadin is the UI)
 - `org.springframework.beans.factory.annotation.Autowired` — use **constructor injection**
@@ -77,12 +77,16 @@ confirmation before proceeding.
 - [ ] **I18N**: every user-visible string uses `Localizable.of("<fallback>", "<domain>.<key>")` — **no raw `String` literals** in `.text(...)`, `.label(...)`, `.placeholder(...)`, `.helperText(...)`
 - [ ] **`@Caption`**: every user-visible bean field carries `@Caption(value = "<fallback>", messageCode = "<domain>.<field>")` — labels in `EntityFormPanel` and `ListingBundle` are resolved automatically
 - [ ] **A11Y**: every input has `.label(Localizable.of(...))`, icon-only buttons have `.ariaLabel(Localizable.of(...))`, `ListingBundle` has `.ariaLabel(...)`, form sections are identified by a heading
+- [ ] **AppBar defaults**: the shell has a working global search field wired to a real view/filter, a notifications bell, a user avatar with a working Sign out action, and a language switcher (English + at least one additional locale) backed by two message bundles (`messages.properties` + `messages_<lang>.properties`) — see [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md)
 - [ ] No `PropertyBox` in emitted code
+- [ ] **JPA anti-pattern guardrail** — if any JPA code or `spring.jpa.*` property was emitted, it was scanned against [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md): zero 🛑 findings, every ⚠️ carries a `// JPA-WAIVER(<id>):` comment, and the guardrail report appears in the Step 8 summary. Note that inferred dropdown values become lookup-table FKs — never `@Enumerated` enums (`JPA-005`)
 - [ ] No `@Autowired` — dependencies injected via constructors (`@Service`/`@Component`/`@Repository` only when Spring lifecycle is required)
 - [ ] CSS added only as a last resort — new CSS is permitted **only when** the built-in Holon/Vaadin component styling cannot achieve the required visual result; if CSS is needed, add it to `src/main/resources/META-INF/resources/styles.css` (loaded via `@StyleSheet("styles.css")` on `AppShellConfigurator` after `@StyleSheet(Lumo.STYLESHEET)`) and justify with a comment
 - [ ] **Component inventory**: before emitting, verify every region maps to an exact Holon class from `references/html-mapping.md`; for any region with ⚠️ **stop and ask the developer** before proceeding
 - [ ] Auth guard on every `@Route` that requires a role
 - [ ] Full compilation verified
+- [ ] **Demo data seeded** (`demo` Spring profile, `src/main/resources/db/demo-seed/V9NN__demo_seed_<entity>.sql`, 5–10 rows per entity reusing the mockup's own sample names/numbers, plus at least one row per lookup table) — see [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md)
+- [ ] **Mandatory visual verification performed** (Step 7b): app run with the `demo` profile, every generated view screenshotted with data loaded, and compared region-by-region against the source HTML mockup using the Step 4b Visual Region Inventory. No `Full`-fidelity region rendered empty/zeroed. Both screenshots (mockup + live view) and the region-by-region comparison are included in the Step 8 fidelity report
 
 ## Pipeline
 
@@ -240,7 +244,7 @@ The table below is the authoritative quick reference; `html-mapping.md` contains
 
 | HTML region | Holon Vaadin component |
 |-------------|----------------------|
-| Appbar (brand + search + user chip + notifications) | `AppShellLayout.builder().navbarBrand(...).search(...).user(...).notifications(...).configure(this)` |
+| Appbar (brand + search + user chip + notifications) | `AppShellLayout.builder().navbarBrand(...).search(...).user(...).notifications(...).configure(this)` — `.user(...).menu(...)` renders but does not wire clicks; build a working Sign out action and language switcher via `customizeEnd(...)`, see [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md) |
 | Side navigation | `Components.sideNav().withItem("Label", VaadinIcon.X, View.class).build()` inside `AppShellLayout` |
 | Breadcrumb | `Components.breadcrumb().item("CRM", HomeView.class).item("Customers").build()` |
 | Tab bar | `Components.tabSheet().tab("Overview", content).tab("Orders", orders).build()` or `Components.lazyTabs()` |
@@ -347,6 +351,28 @@ Produce, in order:
 6. **Views** — Holon Vaadin Flow views (`@Route`, `MasterDetailLayout` / `ListingBundle` / `EntityCreationForm`, `EntityFormPanel`, Holon Auth guards, all strings via `Localizable.of(...)`) — in `com.example.<app>.<feature>`; before emitting each view confirm its Holon component against Step 4
 7. **I18N** — Holon i18n message resources for all extracted UI copy (`messages.properties`)
 
+### Step 7b: Seed demo data + mandatory visual verification (blocking)
+
+Do this immediately after Step 7, before Step 8's fidelity report. Never verify against an
+empty database — see [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md)
+for the full recipe. In short:
+
+1. Add a `demo` Spring profile (`spring.flyway.locations=classpath:db/migration,classpath:db/demo-seed`
+   in `application-demo.properties`) and write `V9NN__demo_seed_<entity>.sql` scripts seeding
+   5–10 rows per entity — reuse the mockup's own visible sample names/numbers (e.g. the exact
+   customer names shown in the HTML) so the verification screenshot reads like the mockup, not
+   generic placeholder data. Seed at least one row per lookup entity too.
+2. Run the app with the `demo` profile and log in as a seeded user.
+3. Screenshot every generated view with data loaded (grid populated, hero/KPI values non-zero).
+4. Screenshot the source HTML mockup file directly (`file://...`) for side-by-side reference.
+5. Compare region-by-region against the Step 4b Visual Region Inventory:
+   - Every `Full` region must be visible **and populated** — an empty/zeroed `Full` region is a
+     regression; fix the seed data, fetch binding, or filter and re-verify before continuing.
+   - `Partial` regions only need their structural container to match (decorative CSS may differ).
+   - `Manual` / out-of-scope regions must already be raised in Step 4b/8's unresolved-regions list,
+     not silently missing.
+6. Carry both screenshots and the comparison notes into the Step 8 report.
+
 ### Step 8: Emit file tree summary and fidelity report
 
 After generating, print:
@@ -387,6 +413,26 @@ what needed custom CSS, and what was not implemented:
 | ... | ... | ... | ... |
 ```
 
+**D) Visual verification evidence** — attach the two screenshots taken in Step 7b (live
+view with demo data loaded, and the source mockup) plus a short per-region pass/fail note
+for every `Full`-fidelity region from the table above. Do not omit this section — a fidelity
+declaration without evidence that the `Full` regions actually render populated data is
+incomplete. If any `Full` region failed verification, state so explicitly rather than
+reporting the skill as done:
+
+```
+## Visual verification
+
+- Live view screenshot: <path or embedded image>
+- Mockup screenshot: <path or embedded image>
+- Region-by-region result:
+  | # | Region | Result |
+  |---|--------|--------|
+  | 1 | Appbar | Pass — populated |
+  | 3 | Master list panel | Pass — 5 seeded rows visible |
+  | ... | ... | ... |
+```
+
 ## Error conditions
 
 | Condition | Response |
@@ -406,7 +452,10 @@ what needed custom CSS, and what was not implemented:
 - [`../implement/references/datastore-patterns.md`](../implement/references/datastore-patterns.md) — Datastore idioms
 - [`../implement/references/holon-vaadin-ui.md`](../implement/references/holon-vaadin-ui.md) — UI component patterns
 - [`../implement/references/security-patterns.md`](../implement/references/security-patterns.md) — Holon Auth patterns
+- [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md) — mandatory AppBar elements (search, notifications, user/sign-out menu, language switcher) and the two-locale i18n bundle + `LocalizationContext` wiring
+- [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md) — mandatory demo data seeding + screenshot-based visual verification gate (Step 7b), and what "matching the mockup" does and doesn't mean
 - [`../../rules/holon-stack.md`](../../rules/holon-stack.md) — allow/ban list
+- [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md) — JPA/Hibernate anti-pattern catalog + blocking guardrail protocol
 
 ## Related skills
 

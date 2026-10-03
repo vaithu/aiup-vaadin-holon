@@ -135,7 +135,7 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 | `com.vaadin:vaadin-core` / `com.vaadin.flow.component.*` | **Raw Vaadin core components are banned.** If no Holon equivalent exists, stop and ask the developer. | Holon Vaadin Flow (`com.holonplatform.vaadin.flow.components.*`); ask developer if no equivalent |
 | `com.vaadin.flow.ai.controller.*` built-in controllers (`GridAIController`, `ChartAIController`, `FormAIController`) / `com.vaadin:vaadin-ai-extensions-flow` | **Commercial Vaadin AI extensions** — require a paid subscription | Free `vaadin-ai-core-flow` + a **Holon-backed custom `AIController` / `DatabaseProvider`** |
 | `com.holonplatform.core.property.PropertyBox` | **Use `Bean` + `BeanPropertySet` exclusively** | Plain JavaBean + `BeanPropertySet<T>` |
-| `jakarta.persistence.*` / `javax.persistence.*` | JPA annotations — only allowed when used as Spring JPA fallback (when Holon `BeanDatastoreHelper`/`Datastore` cannot fulfil the query); requires a `// FALLBACK: BeanDatastoreHelper has no equivalent for <thing>` comment | `@DataPath` / `@Identifier` on plain JavaBean |
+| `jakarta.persistence.*` / `javax.persistence.*` | JPA annotations — only allowed when used as Spring JPA fallback (when Holon `BeanDatastoreHelper`/`Datastore` cannot fulfil the query); requires a `// FALLBACK: BeanDatastoreHelper has no equivalent for <thing>` comment **and** a clean run of the [JPA anti-pattern guardrail](jpa-anti-patterns.md) | `@DataPath` / `@Identifier` on plain JavaBean |
 | `org.hibernate.validator.constraints.*` | Hibernate-specific constraint annotations — use standard Jakarta Bean Validation instead | `jakarta.validation.constraints.*` (`@NotBlank`, `@NotNull`, `@Size`, `@Min`, `@Max`, `@Email`, etc.) |
 | `org.springframework.data.jpa.*` | Spring Data JPA — use only as a fallback when `BeanDatastoreHelper`/`Datastore` cannot fulfil the requirement; requires a `// FALLBACK:` comment | `Datastore` + `BeanPropertySet` |
 | `org.springframework.data.repository.*` | Spring Data repositories — use only as part of Spring JPA fallback; requires a `// FALLBACK:` comment | `Datastore` + `BeanPropertySet` |
@@ -150,6 +150,31 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 > (see *Allowed Dependencies*) when the class needs Spring lifecycle participation, but
 > Holon `Context` wiring is still preferred and `@Autowired` remains banned — inject via
 > constructors.
+
+---
+
+## JPA Anti-Patterns Guardrail
+
+Whenever a skill emits JPA code — an `@Entity`, a `JpaRepository`, a `@Transactional`
+service, or a `spring.jpa.*` property — it MUST run the guardrail defined in
+[`jpa-anti-patterns.md`](jpa-anti-patterns.md) **before** writing the file.
+
+The short version:
+
+- 🛑 **BLOCK findings are never emitted.** Rewrite to the correct form, or stop and ask
+  the developer. Emitting a blocked anti-pattern with an explanatory comment is a violation.
+- ⚠️ **WARN findings** require an inline `// JPA-WAIVER(<id>): <one-line justification>`
+  comment plus an entry in the final report.
+- Every task that touched JPA code prints a **JPA anti-pattern guardrail** report, or
+  `✅ JPA anti-pattern guardrail: clean`.
+
+High-frequency 🛑 blockers (full table in [`jpa-anti-patterns.md`](jpa-anti-patterns.md)):
+`FetchType.EAGER` (including the `@ManyToOne` default), `CascadeType.ALL`/`REMOVE` on the
+many side, `@OneToMany` without `mappedBy`, `List` for `@ManyToMany`, `@Enumerated` /
+Java enums for domain values, `GenerationType.AUTO`, missing `@Version`, Lombok `@Data`
+on entities, `equals`/`hashCode` on a generated id, N+1 association access inside a loop,
+`findAll()` inside a listing fetch callback, custom methods on a repository,
+`repository.save()` for writes, and `open-in-view=true` / `ddl-auto=update`.
 
 ---
 
@@ -332,7 +357,7 @@ helper.withTransaction(tx -> {
 });
 ```
 
-See [`references/datastore-patterns.md`](skills/implement/references/datastore-patterns.md)
+See [`skills/implement/references/datastore-patterns.md`](../skills/implement/references/datastore-patterns.md)
 for the full method reference including pagination, bulk operations, and the typed Model
 interface pattern.
 

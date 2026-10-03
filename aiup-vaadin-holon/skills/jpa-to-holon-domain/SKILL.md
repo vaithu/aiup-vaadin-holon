@@ -66,6 +66,42 @@ src/main/resources/
 
 ---
 
+## Step 0 — JPA anti-pattern guardrail (blocking)
+
+**Read [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md) before touching
+the entity.** This skill both *reads* existing JPA mappings and *emits* new JPA-adjacent code,
+so the guardrail runs twice:
+
+**Pass 1 — audit the existing entity (report, do not silently rewrite).**
+Scan the entity against the Detection Table and produce a findings list:
+
+```
+| ID | Field / line | Finding | Severity | Proposed fix |
+|----|--------------|---------|----------|--------------|
+| JPA-001 | Customer.owner | @ManyToOne with default EAGER fetch | 🛑 | fetch = FetchType.LAZY |
+| JPA-005 | Customer.type | @Enumerated(STRING) domain enum | 🛑 | Long typeId FK + customer_type lookup table |
+```
+
+- 🛑 findings on fields this skill already rewrites (enums → lookup FK, missing `@Version`,
+  `LocalDateTime` → `Instant`) are fixed as part of Steps 1–5.
+- 🛑 findings **outside** this skill's mandate (cascade rules, fetch types, Lombok on the
+  entity, `equals`/`hashCode`) are reported and the developer is asked for approval before
+  the entity is modified — never refactor unrelated mappings unannounced.
+- If the entity has **no** 🛑 findings, print `✅ JPA anti-pattern guardrail (pass 1): clean`.
+
+**Pass 2 — gate the emitted code.** Before writing the repository, service, and any entity
+edits, re-scan what you are about to emit. Zero 🛑 findings may be emitted. ⚠️ findings
+need an inline `// JPA-WAIVER(<id>): <justification>` comment. Print the guardrail report in
+the final summary alongside the compile gate result.
+
+The 🛑 rules most often hit by this skill:
+`JPA-001` EAGER fetch · `JPA-005` `@Enumerated` domain enums · `JPA-012` missing `@Version` ·
+`JPA-020` Lombok `@Data` on entities · `JPA-033` custom repository methods ·
+`JPA-035`/`JPA-036` streams outside a transaction or left unclosed · `JPA-040`
+`repository.save()` for writes · `JPA-050`/`JPA-051` `open-in-view` / `ddl-auto`.
+
+---
+
 ## Step 1 — Read and annotate the entity
 
 ### 1a. Catalogue the entity fields
@@ -457,6 +493,17 @@ public Stream<Customer> findActiveByTier(Customer.Tier tier) {
 
 ## Constraints
 
+- **Run the [JPA anti-pattern guardrail](../../rules/jpa-anti-patterns.md)** (Step 0) before
+  and after emitting — zero 🛑 findings; every ⚠️ carries a `// JPA-WAIVER(<id>):` comment;
+  guardrail report printed in the final summary.
+- **Every association is explicitly `FetchType.LAZY`** — the `@ManyToOne` / `@OneToOne`
+  EAGER default is a blocker (`JPA-001`).
+- **No `CascadeType.ALL` / `REMOVE` on the many side**; cascade only parent → child (`JPA-002`).
+- **No `@Enumerated` and no Java enum for a domain value** — migrate to a lookup-table FK (`JPA-005`).
+- **Every entity carries `@Version`** and uses `Instant` (not `LocalDateTime`) for stored
+  timestamps (`JPA-012`, `JPA-008`).
+- **No Lombok `@Data` / `@EqualsAndHashCode` / `@ToString` on entities**; `toString()` touches
+  scalar fields only (`JPA-020`, `JPA-022`).
 - **Never remove or change JPA annotations** — the JPA persistence layer must keep working.
 - **Zero custom methods in the repository** — all query logic lives in the service.
 - **All writes go through `BeanDatastoreHelper`** — never call `repository.save()` for writes.
@@ -467,6 +514,8 @@ public Stream<Customer> findActiveByTier(Customer.Tier tier) {
 - **No separate `Datastore` field** — use `helper.getDatastore()` to keep the constructor lean.
 - **Append** to resource bundles — never overwrite entries from other entities.
 - **Compile gate** — build must be clean after every entity conversion.
+- **Guardrail gate** — the JPA anti-pattern guardrail must be clean (or fully waived) before
+  the conversion is reported as done; a clean compile alone is not sufficient.
 - **Never name a business field `version`** — `BaseEntity` declares `@Version Long version` and
   Lombok will generate a conflicting `getVersion(): Long`. Use descriptive names like
   `revisionLabel` or `schemaVersion` for business-version strings.

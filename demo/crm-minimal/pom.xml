@@ -26,6 +26,14 @@
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>4.1.0</spring-boot.version>
+        <!--
+            Gate for booting the full Vaadin app during the integration-test phase.
+            Default true (skipped) so `mvn install`/`mvn verify` stays fast. The `it`
+            profile flips this to false; you can also override on the CLI:
+                mvn verify -Pit
+                mvn verify -Dskip.boot.its=false
+        -->
+        <skip.boot.its>true</skip.boot.its>
     </properties>
 
     <dependencyManagement>
@@ -104,6 +112,29 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--  Redis-backed TenantDetailsCacheStore — a single cache shared across every app
+              instance, so an admin suspend/plan-change is visible everywhere immediately (not
+              just after the per-instance TTL). Activates automatically once a RedisConnectionFactory
+              bean exists (see spring-boot-starter-data-redis below + spring.data.redis.* in
+              application.properties); falls back to the per-JVM in-memory cache otherwise.  -->
+        <dependency>
+            <groupId>com.holon-platform.multi-tenancy</groupId>
+            <artifactId>holon-multi-tenant-cache-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!--  Auto-starts the Redis service declared in compose.yaml (docker compose up) when
+              running locally via `mvn spring-boot:run`; no-op in prod/CI where spring.data.redis.*
+              already points at a real Redis instance and no compose.yaml is on the classpath path.  -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-docker-compose</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!--  Flyway  applies src/main/resources/db/migration (and, on the test classpath,
               src/test/resources/db/migration test-seed scripts) against the H2 datasource.
               Spring Boot 4's autoconfigure modularization moved FlywayAutoConfiguration out of
@@ -139,6 +170,31 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--  Vaadin Browserless testing (server-side, no browser) per the official guide:
+              https://vaadin.com/docs/latest/flow/testing/browserless/getting-started
+              Provides SpringBrowserlessTest + the find()/test()/navigate() API. The Vaadin BOM
+              (25.2.1) does not yet manage this artifact, so the version is pinned to the 1.1.x
+              line that targets Vaadin 25.2 (1.0.x targeted 25.1.0-rc and references components,
+              e.g. a since-removed Slider, that no longer exist in 25.2).  -->
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>browserless-test-spring</artifactId>
+            <version>1.1.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--  Playwright  browser-driven end-to-end tests (UC-S-001 Create Customer).
+              Blackbox: drives the running app at http://localhost:8080 only. Executed by
+              maven-failsafe-plugin in the `it` profile (*IT classes), NOT surefire, so the
+              unit test run stays browser-free. Install the browser binaries once via the
+              Playwright CLI (see README / SKILL for the exact install command).  -->
+        <dependency>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
+            <version>1.49.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -211,7 +267,12 @@
                             <goal>start</goal>
                         </goals>
                         <configuration>
-                            <skip>true</skip>
+                            <skip>${skip.boot.its}</skip>
+                            <!-- Vaadin dev-mode frontend scan can take minutes on a cold
+                                 start; give the JMX readiness handshake up to ~5 min
+                                 (wait 2s * 150 attempts) instead of the 30s default. -->
+                            <wait>2000</wait>
+                            <maxAttempts>150</maxAttempts>
                         </configuration>
                     </execution>
                     <execution>
@@ -220,7 +281,7 @@
                             <goal>stop</goal>
                         </goals>
                         <configuration>
-                            <skip>true</skip>
+                            <skip>${skip.boot.its}</skip>
                         </configuration>
                     </execution>
                 </executions>
@@ -238,6 +299,47 @@
         see the properties block for the exact toggles that flip each one into a hard gate.
     -->
     <profiles>
+
+        <!--
+            Integration / end-to-end tests (Playwright, UC-S-001). Opt-in:
+                mvn verify -Pit
+            Activating this profile flips skip.boot.its to false, so the
+            spring-boot-maven-plugin start/stop executions boot the live app on
+            http://localhost:8080 for the integration-test phase, and
+            maven-failsafe-plugin runs the *IT classes against it. First run
+            (or after an intentional UI change) generate visual baselines with:
+                mvn verify -Pit -Dplaywright.snapshotsUpdate=true
+        -->
+        <profile>
+            <id>it</id>
+            <properties>
+                <skip.boot.its>false</skip.boot.its>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.5.2</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>integration-tests</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <profile>
             <id>quality</id>
             <properties>
@@ -414,6 +516,10 @@
                             <nodeAnalyzerEnabled>false</nodeAnalyzerEnabled>
                             <retireJsAnalyzerEnabled>false</retireJsAnalyzerEnabled>
                             <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                            <!-- Sonatype OSS Index now rejects anonymous requests with HTTP 401;
+                                 disabled so the gate does not fail without an OSS Index account. NVD
+                                 remains the CVE source. -->
+                            <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
                         </configuration>
                         <executions>
                             <execution>

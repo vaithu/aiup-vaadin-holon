@@ -4,18 +4,14 @@ import com.example.crm.service.CrmLoginService;
 import com.holonplatform.multitenant.TenantDetails;
 import com.holonplatform.multitenant.TenantDetailsLoader;
 import com.holonplatform.vaadin.flow.components.Components;
-import com.holonplatform.vaadin.flow.components.Input;
 import com.holonplatform.vaadin.flow.components.SingleSelect;
+import com.iyensoft.vaadin.flow.components.SignInPage;
+import com.iyensoft.vaadin.flow.components.builders.SignInPageBuilder;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
-import com.vaadin.flow.component.orderedlayout.FlexComponent.JustifyContentMode;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
 import java.util.List;
@@ -26,96 +22,79 @@ import java.util.Optional;
 @AnonymousAllowed
 public class LoginView extends VerticalLayout {
 
-    private final CrmLoginService loginService;
-    private final TenantDetailsLoader tenantDetailsLoader;
-
-    private final Input<String> emailField = Components.input.string().label("Email").build();
-    private final Input<String> passwordField = Components.input.password().label("Password").build();
-    private final Div errorMessage = new Div();
-    private final Div pickerContainer = new Div();
-
-    private SingleSelect<String> tenantPicker;
-    private List<String> pendingTenantIds = List.of();
+    private final transient CrmLoginService loginService;
+    private final transient TenantDetailsLoader tenantDetailsLoader;
 
     public LoginView(CrmLoginService loginService, TenantDetailsLoader tenantDetailsLoader) {
         this.loginService = loginService;
         this.tenantDetailsLoader = tenantDetailsLoader;
 
-        errorMessage.getStyle().set("color", "var(--lumo-error-text-color)");
-        errorMessage.setVisible(false);
-
-        var signInButton = Components.button()
-                .text("Sign in")
-                .withClickListener(event -> submit())
+        SignInPage signInPage = SignInPageBuilder.create()
+                .heading("IyenSoft CRM")
+                .subtitle("Sign in to your workspace")
+                .socialLogin(false)
+                .keepLoggedIn(false)
+                .forgotPassword(false)
+                .signUp(true)
+                .withSignInListener(this::onSignIn)
+                .withSignUpListener(event -> UI.getCurrent().navigate("signup"))
                 .build();
 
-        var signUpButton = Components.button()
-                .text("Create an account")
-                .withClickListener(event -> UI.getCurrent().navigate("signup"))
-                .build();
-
-        add(new H1("IyenSoft CRM"),
-                emailField.getComponent(),
-                passwordField.getComponent(),
-                errorMessage,
-                pickerContainer,
-                signInButton,
-                signUpButton);
-
+        add(signInPage);
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
         setSizeFull();
     }
 
-    private void submit() {
-        String email = emailField.getValue();
-        String password = passwordField.getValue();
-
-        if (!pendingTenantIds.isEmpty()) {
-            // Step 2: the user already chose a workspace from the picker.
-            String tenantId = tenantPicker.getValue();
-            if (tenantId == null) {
-                showError("Please choose a workspace.");
-                return;
-            }
-            attemptLogin(tenantId, email, password);
-            return;
-        }
+    private void onSignIn(SignInPage.SignInEvent event) {
+        SignInPage page = event.getSource();
+        String email = event.getEmail();
+        String password = event.getPassword();
 
         List<String> tenantIds = loginService.findTenantsForEmail(email);
         if (tenantIds.isEmpty()) {
-            showError("No account found for that email.");
+            page.setErrorMessage("No account found for that email.");
         } else if (tenantIds.size() == 1) {
-            attemptLogin(tenantIds.get(0), email, password);
+            attemptLogin(page, tenantIds.get(0), email, password);
         } else {
-            showWorkspacePicker(tenantIds);
+            showWorkspacePicker(page, tenantIds, email, password);
         }
     }
 
-    private void attemptLogin(String tenantId, String email, String password) {
+    private void attemptLogin(SignInPage page, String tenantId, String email, String password) {
         Optional<TenantDetails> tenant = loginService.authenticate(tenantId, email, password);
         if (tenant.isPresent()) {
-            // Full page navigation (not UI.navigate) so the fresh HTTP request carries the
-            // real /t/{tenantId}/... path, letting PathPrefixTenantResolver resolve it and
-            // seed the session cache for every later in-app request.
-            UI.getCurrent().getPage().setLocation("/t/" + tenant.get().tenantId() + "/contacts");
+            // Full page navigation (not UI.navigate) so the fresh HTTP request reloads the saved
+            // Spring SecurityContext. The tenant is resolved from the session cache seeded during
+            // authenticate() (SessionCachingTenantResolver), so a plain route — which is what
+            // Vaadin's router can actually match — is used instead of a /t/{tenantId}/ prefix.
+            UI.getCurrent().getPage().setLocation("/customers");
         } else {
-            showError("Incorrect email or password.");
+            page.setErrorMessage("Incorrect email or password.");
         }
     }
 
-    private void showWorkspacePicker(List<String> tenantIds) {
-        pendingTenantIds = tenantIds;
-
-        tenantPicker = Components.input.singleOptionSelect(String.class)
+    private void showWorkspacePicker(SignInPage page, List<String> tenantIds, String email, String password) {
+        SingleSelect<String> tenantPicker = Components.input.singleOptionSelect(String.class)
                 .label("Choose your workspace")
                 .dataSource(new ListDataProvider<>(tenantIds))
                 .itemCaptionGenerator(this::displayNameFor)
                 .build();
 
-        pickerContainer.removeAll();
-        pickerContainer.add(tenantPicker.getComponent());
-        errorMessage.setVisible(false);
+        Components.alertDialog()
+                .title("Choose your workspace")
+                .bodyContent(tenantPicker.getComponent())
+                .confirmText("Continue")
+                .cancelText("Cancel")
+                .onConfirm(() -> {
+                    String tenantId = tenantPicker.getValue();
+                    if (tenantId == null) {
+                        return false; // keep the dialog open until a workspace is chosen
+                    }
+                    attemptLogin(page, tenantId, email, password);
+                    return true;
+                })
+                .open();
     }
 
     private String displayNameFor(String tenantId) {
@@ -126,10 +105,5 @@ public class LoginView extends VerticalLayout {
         } catch (RuntimeException e) {
             return tenantId;
         }
-    }
-
-    private void showError(String message) {
-        errorMessage.setText(message);
-        errorMessage.setVisible(true);
     }
 }

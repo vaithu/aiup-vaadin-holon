@@ -7,10 +7,11 @@ free/open-source tooling — **no SonarQube or SonarCloud account, server, or li
 is required.**
 
 The reference implementation lives in the demo module:
-[`demo/crm-minimal`](../../demo/crm-minimal) — see its `pom.xml` `quality` profile,
-its [`config/`](../../demo/crm-minimal/config) rulesets, and the
-[`java-quality.yml`](../../.github/workflows/java-quality.yml) /
-[`codeql.yml`](../../.github/workflows/codeql.yml) workflows.
+[`demo/crm-minimal`](../../demo/crm-minimal) — see its `pom.xml` `quality` profile
+and its [`config/`](../../demo/crm-minimal/config) rulesets. The CI half of the
+gate — the `java-quality.yml` and `codeql.yml` workflows that run it on every
+push — is in
+[`skills/traceability-sensors/references/ci.md`](../skills/traceability-sensors/references/ci.md).
 
 ## Why this is a testing guardrail
 

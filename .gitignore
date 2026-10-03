@@ -4,3 +4,16 @@
 
 node_modules
 target
+
+*.log
+
+*.txt
+src/main/frontend/
+
+demo/
+
+/*/frontend/
+
+**/src/main/frontend/
+**/src/main/bundles/
+

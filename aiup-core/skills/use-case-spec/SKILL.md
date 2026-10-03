@@ -120,4 +120,6 @@ Before considering the document done, verify every item:
 - [ ] Every alternative flow ends with `Use case continues at step N.` or `Use case ends.` — never open-ended.
 - [ ] Both Success and Failure postconditions are defined and non-empty.
 - [ ] Each business rule has a `BR-XXX` ID; across multiple files in one task, the IDs are unique and do not restart at `BR-001`.
+- [ ] A rule that two or more use cases must honour is stated **once** — run `/business-rules` to lift it into `docs/business_rules.md` as a `GR-XXX` and leave the local `BR-XXX` heading pointing at it with a `Realizes [...]` link.
+- [ ] The `Status` value is honest: `Done`/`Tested` are assertions that switch the coverage sensor on, not labels. Leave the status at `Draft`/`Approved` until `/coverage-check UC-XXX` reports no gaps.
 - [ ] No step contains technical implementation detail — no HTTP verbs (POST/GET), SQL, class names, regex, exception names, or protocol terms (SMTP, JWT, bcrypt). See the template's step-writing guidelines.
