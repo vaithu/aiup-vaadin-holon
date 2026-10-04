@@ -37,7 +37,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class Application implements AppShellConfigurator { ... }
 ```
 
-> **Do not use the deprecated `@Theme("<app-name>")` annotation** — it was removed in Vaadin 25.2.
+> **Do not use the deprecated `@Theme("<app-name>")` annotation** — it was removed in Vaadin 25.3.
 > The `src/main/frontend/themes/<app-name>/` directory approach is no longer supported.
 
 ---

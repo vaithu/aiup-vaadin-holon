@@ -57,7 +57,7 @@ private Long id;
 ### `@Caption` — I18N label for every property ⭐ required
 
 Every user-visible bean field MUST be annotated with `@Caption` so that Holon components
-(`ListingBundle`, `EntityPanelForm`) automatically pick up translated labels and column
+(`ListingBundle`, `EntityFormPanel`) automatically pick up translated labels and column
 headers from the `BeanPropertySet` — no `.columnHeader(...)` or `.propertyCaption(...)`
 calls needed in view code.
 
@@ -91,7 +91,7 @@ private String status;
 ### `@NotNull` — required-field marker
 
 Mark mandatory fields with `@NotNull` from `jakarta.validation.constraints`.
-`EntityPanelForm` reads this annotation and sets `aria-required="true"` automatically.
+`EntityFormPanel` reads this annotation and sets `aria-required="true"` automatically.
 
 ```java
 import jakarta.validation.constraints.NotNull;
@@ -104,7 +104,7 @@ private String vendorName;
 ### `@Sequence` — property ordering
 
 Use `@Sequence` to control the order in which properties appear in `BeanPropertySet` iteration,
-which determines the default column / field order in `ListingBundle` and `EntityPanelForm`.
+which determines the default column / field order in `ListingBundle` and `EntityFormPanel`.
 
 ```java
 import com.holonplatform.core.beans.Sequence;
@@ -318,7 +318,7 @@ public class Bill {
 }
 ```
 
-> With `@Caption` on every field, `ListingBundle` and `EntityPanelForm` automatically
+> With `@Caption` on every field, `ListingBundle` and `EntityFormPanel` automatically
 > resolve column headers and field labels from the `BeanPropertySet` — no `.columnHeader()`
 > or `.propertyCaption()` calls are needed in the view.
 > 

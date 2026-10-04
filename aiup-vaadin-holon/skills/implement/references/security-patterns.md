@@ -102,7 +102,7 @@ a context resource.
 
 ```java
 import com.holonplatform.auth.annotations.Authenticate;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Layout;
 import com.vaadin.flow.router.Route;
 
 @Authenticate                                   // any authenticated user may access this route
@@ -134,7 +134,7 @@ Use `jakarta.annotation.security.RolesAllowed` to require that the authenticated
 ```java
 import jakarta.annotation.security.RolesAllowed;
 import com.holonplatform.auth.annotations.Authenticate;
-import com.holonplatform.vaadin.flow.vaadinplus.components.Layout;
+import com.iyensoft.vaadin.flow.components.Layout;
 import com.vaadin.flow.router.Route;
 
 @Authenticate

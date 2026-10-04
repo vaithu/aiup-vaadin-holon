@@ -45,7 +45,9 @@ first.
 > **Why schema-first?** `@DataPath` field names on JavaBeans must match the exact column names
 > produced by the Flyway migrations. Migrations are generated from the entity model *before*
 > Java code is written, keeping field-to-column mapping unambiguous. JPA `ddl-auto` is not
-> applicable — `jakarta.persistence.*` is banned.
+> applicable (`ddl-auto=none`; Flyway owns the schema). Domain beans stay plain JavaBeans:
+> `jakarta.persistence.*` is banned in application code, with a narrow exception for the
+> `holon-saas` entities and wiring named in `rules/holon-stack.md`.
 
 ---
 
@@ -104,23 +106,23 @@ Your project must have:
       <dependency>
         <groupId>com.holon-platform.vaadin</groupId>
         <artifactId>holon-vaadin-flow-bom</artifactId>
-        <version>10.0.1</version>
+        <version>12.0.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>com.vaadin</groupId>
         <artifactId>vaadin-bom</artifactId>
-        <version>25.2.1</version>
+        <version>25.3.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
   ```
-  > **Note:** Holon 10.x is built from the fork at https://github.com/vaithu/holon-vaadin-flow.
+  > **Note:** Holon 12.x is built from the fork at https://github.com/vaithu/holon-vaadin-flow.
   > Run `mvn install` on the fork before using these artifacts locally.
-- **Vaadin 25.2** (pulled in via `holon-vaadin-flow-spring-boot` starter)
+- **Vaadin 25.3** (pulled in via `holon-vaadin-flow-spring-boot` starter)
 - **Spring Boot 4.1.x** (bootstrap runtime)
 - **Flyway 10.x**, **PostgreSQL 16+**
 - `docs/vision.md` at the project root
@@ -132,13 +134,13 @@ Your project must have:
 | Component | Version | Source of truth |
 |-----------|---------|-----------------|
 | Java | 25 | — |
-| Holon Vaadin Flow BOM | `com.holon-platform.vaadin:holon-vaadin-flow-bom:10.0.1` | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Core | 10.0.0 | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Datastore | 10.0.0 | https://github.com/vaithu/holon-vaadin-flow |
-| Spring JPA (fallback) | via Spring Boot 4.1.0 | — |
-| Holon Vaadin Flow | 10.0.1 | https://github.com/vaithu/holon-vaadin-flow |
-| Vaadin Flow | 25.2.1 | — |
-| Spring Boot | 4.1.0 | — |
+| Holon Vaadin Flow BOM | `com.holon-platform.vaadin:holon-vaadin-flow-bom:12.0.1` | https://github.com/vaithu/holon-vaadin-flow |
+| Holon Core | 12.0.0 | https://github.com/vaithu/holon-vaadin-flow |
+| Holon JPA Datastore (`BeanDatastore`, `BeanDatastoreHelper`) | `holon-datastore-jpa-spring-boot:12.0.0` | https://github.com/vaithu/holon-vaadin-flow |
+| Spring JPA (fallback) | via Spring Boot 4.1.1 | — |
+| Holon Vaadin Flow | 12.0.1 | https://github.com/vaithu/holon-vaadin-flow |
+| Vaadin Flow | 25.3.0 | — |
+| Spring Boot | 4.1.1 | — |
 | Flyway | 10.x | — |
 | PostgreSQL | 16+ | — |
 | JUnit | 5 | — |
@@ -191,9 +193,12 @@ src/main/java/com/example/ap/
 │   └── BillDetailView.java              # PropertyForm<Bill>, approval buttons
 └── security/
     └── ApRealmConfig.java               # Realm bootstrap: AP_REVIEWER, FINANCE_DIRECTOR, RECEIVER roles
-src/main/resources/db/migration/
-├── V001__create_bill_tables.sql
-└── V002__auth_schema.sql               # Holon Auth role/permission tables scaffold
+src/main/resources/db/migration/                # platform schema (holon-saas): tenant tables, login account
+├── V001__create_tenant_tables.sql
+src/main/resources/db/tenant-migration/         # every company's schema, V002 and up (V1 is the framework's)
+├── V002__create_bill_table.sql
+└── V003__create_bill_line_table.sql
+# A Holon Auth scaffold (V0NN__auth_schema.sql) is only for a project that does NOT use holon-saas
 ```
 
 ---

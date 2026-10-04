@@ -48,7 +48,7 @@ public interface BillModel {
     //   NumericProperty  → .count(), .sum(), .avg(), .min(), .max()
     //   StringProperty   → .contains(), .startsWith(), .endsWith(), case-insensitive variants
     //   TemporalProperty → .year(), .month(), .day(), .hour()
-    //   BooleanProperty  → .isTrue(), .isFalse()
+    //   BooleanProperty  → .eq(true), .eq(false)  (no isTrue()/isFalse())
     NumericProperty<Long>        ID           = PROPERTY_SET.propertyNumeric("id");
     StringProperty               VENDOR_NAME  = PROPERTY_SET.propertyString("vendorName");
     StringProperty               INVOICE_NO   = PROPERTY_SET.propertyString("invoiceNumber");

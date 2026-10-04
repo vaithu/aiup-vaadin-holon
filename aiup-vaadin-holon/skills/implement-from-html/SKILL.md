@@ -38,16 +38,16 @@ confirmation before proceeding.
 
 - `com.holon-platform.*` — all Holon modules
 - Data grids: `Components.listing(T.class)` (→ `ListingBundle<T>`)
-- Forms: `EntityFormPanel.bean(T.class)` from `com.holonplatform.vaadin.flow.vaadinplus.components.EntityFormPanel`
+- Forms: `EntityFormPanel.bean(T.class)` from `com.iyensoft.vaadin.flow.components.EntityFormPanel`
 - Creation forms: `Components.entityCreationForm()` with `Components.formStepCard()`
 - Master-detail: `Components.masterDetail(T.class)` (→ `MasterDetailLayout<T>`) from `com.iyensoft.vaadin.flow.components`
-- App shell: `AppShellLayout.builder()` from `com.holonplatform.vaadin.flow.vaadinplus.components.AppShellLayout`
+- App shell: `AppShellLayout.builder()` from `com.iyensoft.vaadin.flow.components.AppShellLayout`
 - Side navigation: `Components.sideNav()` inside `AppShellLayout`
 - Tab bars: `Components.tabSheet()` or `Components.lazyTabs()`
 - Standalone inputs: `Input.*` static methods from `com.holonplatform.vaadin.flow.components.Input`
 - Buttons: `Components.button()` with semantic variants (`.primary()`, `.error()`, `.secondary()`, `.tertiary()`)
 - Notifications: `NotificationUtil.notificationSuccess/Error/Warning(...)` or `NotificationBuilder` — both are Holon classes
-- Confirmation dialogs: `Components.alertDialog()` or `AlertDialog.builder()` from `com.holonplatform.vaadin.flow.vaadinplus.components.AlertDialog`
+- Confirmation dialogs: `Components.alertDialog()` or `AlertDialog.builder()` from `com.iyensoft.vaadin.flow.components.AlertDialog`
 - `org.springframework.boot:spring-boot-starter` + Holon Spring Boot starters (bootstrap only)
 - `org.springframework.stereotype.{Service,Component,Repository}` — permitted when the class needs Spring lifecycle; Holon `Context` still preferred; inject via constructors
 - `org.flywaydb.*`, `org.postgresql.*`, `org.junit.jupiter.*`, `org.testcontainers.*`, `com.microsoft.playwright.*`

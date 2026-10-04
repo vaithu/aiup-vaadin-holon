@@ -84,7 +84,7 @@ Each row of the ban list in `holon-stack.md` becomes one `noClasses().should()
 | `noFieldInjection` | `@Autowired` on fields and setters — dependencies that do not appear in the constructor |
 | `noHibernateValidatorConstraints` | Vendor constraints where Jakarta Bean Validation has an equivalent |
 | `noVaadinI18nProvider` | A second localization mechanism beside Holon's `LocalizationContext` |
-| `noDeprecatedThemeAnnotation` | `@Theme`, removed in Vaadin 25.2 |
+| `noDeprecatedThemeAnnotation` | `@Theme`, removed in Vaadin 25.3 |
 | `noPlainSql` | SQL strings outside the `Datastore` — the thing the typed query API exists to prevent |
 | `noConsoleOutput` | `System.out` / `System.err` instead of SLF4J |
 | `noPersistenceBoxOutsideFallback` | the Holon persistence container used as the domain model instead of a JavaBean + `BeanPropertySet` |

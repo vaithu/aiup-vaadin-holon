@@ -93,7 +93,7 @@ toggles that turn it into a hard gate once the baseline is triaged.
 - **No `@Autowired` in production code** — inject via constructors; in tests, resolve beans from the Spring context or `@Autowired` fields are acceptable in the test class only
 - Seed test data with Flyway migrations in `src/test/resources/db/migration/`
 - Auth context for role-gated tests: use Holon `AuthContext` to bind the current user's permissions (**primary**). If the app uses Spring Security, seed the `SecurityContextHolder` instead (**fallback**, see below). In browserless there is no request-bound `AuthContext`, so **build an `AuthContext` and store it on the `VaadinSession` under `AuthContext.CONTEXT_KEY`** (Holon's `VaadinSessionScope` reads it from the session) — see the example below
-- Query the component tree with **`find(Class)`** → `ComponentQuery` terminals `.first()`, `.single()`, `.all()`; simulate user actions with `test(component)`. (The older `$`/`$view` API belongs to browserless 1.0.x and does **not** work with `browserless-test-spring` 1.1.x on Vaadin 25.2 — always use `find(...)`.)
+- Query the component tree with **`find(Class)`** → `ComponentQuery` terminals `.first()`, `.single()`, `.all()`; simulate user actions with `test(component)`. (The older `$`/`$view` API belongs to browserless 1.0.x and does **not** work with `browserless-test-spring` 1.1.x on Vaadin 25.3 — always use `find(...)`.)
 - Every `@Route` view under a parent `@Route(...) layout` must not be **more permissive** than that layout, or Vaadin's `AnnotatedViewAccessChecker` denies it ("broader access than the layout") and `navigate(...)` reroutes to an error page. Annotate the layout at least as permissively as its most-permissive child (e.g. a `@PermitAll` view needs a `@PermitAll` layout)
 
 ## Pre-Emit Checklist
@@ -274,8 +274,8 @@ VALUES
     <version>1.1.2</version>
     <scope>test</scope>
     <!--
-      The Vaadin BOM (e.g. 25.2.1) does NOT manage browserless-test-spring, so pin a version.
-      Use 1.1.x (or newer) on Vaadin 25.2 — the 1.0.x line was built against Vaadin 25.1-rc
+      The Vaadin BOM (e.g. 25.3.0) does NOT manage browserless-test-spring, so pin a version.
+      Use 1.1.x (or newer) on Vaadin 25.3 — the 1.0.x line was built against Vaadin 25.1-rc
       and references a removed com.vaadin.flow.component.slider.Slider, causing a
       NoClassDefFoundError. 1.1.x provides SpringBrowserlessTest + the find(...) query API.
     -->

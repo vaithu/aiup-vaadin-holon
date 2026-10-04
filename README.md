@@ -4,7 +4,7 @@ A **Claude Code / GitHub Copilot plugin marketplace** that automates the
 [AI Unified Process (AIUP)](https://unifiedprocess.ai) for a **Holon Platform + Vaadin Flow** stack.
 It ports the methodology from [AI-Unified-Process/marketplace](https://github.com/AI-Unified-Process/marketplace)
 and replaces the construction plugins with a single `aiup-vaadin-holon` plugin that targets
-**Holon Platform 10.0.x + Vaadin Flow 25** exclusively.
+**Holon Platform 12.0.x + Vaadin Flow 25** exclusively.
 
 > **Acknowledgements** — The stack-agnostic `aiup-core` skills and the overall marketplace
 > pattern were created by **Simon Martinelli** and **Marc Affolter** at
@@ -79,11 +79,13 @@ the code from drifting apart once both exist. See [The harness](#the-harness).
 | 9c | `/coverage-check UC-XXX` | use case spec + its tests | an audit verdict, before `Status:` claims `Done` | — |
 | 10 | `/session-guards` | the installed sensor classes | `.claude/hooks/` + `.claude/settings.json` | — |
 
-> **Why schema-first?** The plugin targets Holon Datastore (not JPA), which means
-> `@DataPath` field names on JavaBeans must match the actual column names in the database.
-> Flyway migrations must be created from the entity model *before* the Java domain classes are
-> written, so field-to-column mapping is unambiguous. JPA `ddl-auto` style code-first generation
-> is not applicable here — `jakarta.persistence.*` is banned in this stack.
+> **Why schema-first?** The plugin targets the Holon JPA Datastore (`BeanDatastore` /
+> `BeanDatastoreHelper`) over plain JavaBeans, which means `@DataPath` field names must match the
+> actual column names in the database. Flyway migrations must be created from the entity model
+> *before* the Java domain classes are written, so field-to-column mapping is unambiguous. JPA
+> `ddl-auto` style code-first generation is not applicable (`ddl-auto=none`; Flyway owns the schema).
+> Domain beans stay plain JavaBeans: `jakarta.persistence.*` is banned in application code, with a
+> narrow exception for the `holon-saas` entities and wiring named in `rules/holon-stack.md`.
 
 |                       | Inception       | Elaboration                            | Construction                                                                                                                                                                                                                            |
 |-----------------------|-----------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -150,7 +152,7 @@ seconds, which is the only property that makes them worth having.
 | `/flyway-migration` | `/flyway-migration` | Flyway `V*.sql` migration scripts from `docs/entity_model.md` |
 | `/implement` | `/implement UC-XXX` | JavaBean, `BeanPropertySet` model, Holon Datastore service, Vaadin view, and Holon Auth guards for a use case |
 | `/implement-from-html` | `/implement-from-html <file>` | Infers entities, roles, and Holon Vaadin components from an HTML mockup file |
-| `/jpa-to-holon-domain` | `/jpa-to-holon-domain [EntityName]` | In a single pass: annotates the JPA entity with Holon meta-annotations and Jakarta Validation constraints, creates the `BeanPropertySet` companion `*Model` interface, generates I18N resource bundles, and produces a Spring Data JPA `Repository` (marker only) plus a Holon `BeanDatastoreHelper` `Service` with paginated reads and lazy streaming |
+| `/jpa-to-holon-domain` | `/jpa-to-holon-domain [EntityName]` | In a single pass: annotates the JPA entity with Holon meta-annotations and Jakarta Validation constraints, creates the `BeanPropertySet` companion `*Model` interface in the same feature package, generates I18N resource bundles, a Holon `BeanDatastoreHelper` `Service` (no repository by default), and a `HolonEntityMappingValidator` mapping test; the entity extends a shared audit base class |
 | `/jpa-to-holon-views` | `/jpa-to-holon-views [EntityName]` | Generates Vaadin views using the Two-View Pattern: a `ListingBundle` list view and a `MasterDetailLayout` detail view with responsive desktop/mobile behaviour |
 | `/ai-assistant` | `/ai-assistant UC-XXX` | Adds an AI-powered chat assistant to a use case using the **free** `vaadin-ai-core-flow` module: a Vaadin chat view (`MessageList` + `MessageInput`, optional `Upload`), an `AIOrchestrator` bean, an `LLMProvider` (default `SpringAILLMProvider`, config-driven API key), and a Holon `Datastore`-backed custom `AIController` / `DatabaseProvider` exposing the use case's entities read-only. Commercial Grid/Chart/Form AI controllers are not used |
 | `/datastore-test` | `/datastore-test UC-XXX` | JUnit 5 + Testcontainers + Flyway + Holon Datastore integration tests |
@@ -168,12 +170,12 @@ seconds, which is the only property that makes them worth having.
 | Component | Version | Source of truth |
 |-----------|---------|-----------------|
 | Java | **25** | — |
-| Holon Core (Bean, BeanPropertySet, Datastore, Context, Auth) | **`com.holon-platform.core:10.0.0`** | https://github.com/vaithu/holon-vaadin-flow |
-| Holon Datastore | **`com.holon-platform.jdbc:10.0.0`** | https://github.com/vaithu/holon-vaadin-flow |
-| Spring JPA (fallback) | via Spring Boot 4.1.0 | — |
-| Holon Vaadin Flow | **`com.holon-platform.vaadin:10.0.1`** | https://github.com/vaithu/holon-vaadin-flow |
-| Vaadin Flow | **25.2.1** | — |
-| Spring Boot | **4.1.0** | — |
+| Holon Core (Bean, BeanPropertySet, Datastore, Context, Auth) | **`com.holon-platform.core:12.0.0`** | https://github.com/vaithu/holon-vaadin-flow |
+| Holon JPA Datastore (`BeanDatastore`, `BeanDatastoreHelper`) | **`com.holon-platform.jpa:holon-datastore-jpa-spring-boot:12.0.0`** | https://github.com/vaithu/holon-vaadin-flow |
+| Spring JPA (fallback) | via Spring Boot 4.1.1 | — |
+| Holon Vaadin Flow | **`com.holon-platform.vaadin:12.0.1`** | https://github.com/vaithu/holon-vaadin-flow |
+| Vaadin Flow | **25.3.0** | — |
+| Spring Boot | **4.1.1** | — |
 | Flyway | (managed by Spring Boot parent) | — |
 | PostgreSQL | **16+** | — |
 | JUnit | **5** | — |
@@ -363,9 +365,9 @@ entity model → use case specs → Flyway migrations → Holon/Vaadin implement
 ## Prerequisites (for projects using this plugin)
 
 - Java 25
-- Maven or Gradle with the Holon per-module BOMs imported (`holon-vaadin-flow-bom:10.0.1`; no separate Datastore BOM needed when using `holon-datastore-jpa-spring-boot`)
+- Maven or Gradle with the Holon per-module BOMs imported (`holon-vaadin-flow-bom:12.0.1`; no separate Datastore BOM needed when using `holon-datastore-jpa-spring-boot`)
 - Vaadin 25 on the classpath (`holon-vaadin-flow-spring-boot` starter pulls it in)
-- Spring Boot 4.1.0 (bootstrap runtime)
+- Spring Boot 4.1.1 (bootstrap runtime)
 - Flyway (managed by Spring Boot parent), PostgreSQL 16+
 - `docs/vision.md` at the project root describing product vision and target users
 

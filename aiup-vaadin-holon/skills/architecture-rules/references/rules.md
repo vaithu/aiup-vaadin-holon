@@ -126,7 +126,7 @@ public class ArchitectureTest {
     static final ArchRule noDeprecatedThemeAnnotation =
             noClasses()
                     .should().beAnnotatedWith("com.vaadin.flow.theme.Theme")
-                    .because("holon-stack.md: @Theme is removed in Vaadin 25.2 — use "
+                    .because("holon-stack.md: @Theme is removed in Vaadin 25.3 — use "
                             + "@StyleSheet(Lumo.STYLESHEET) then @StyleSheet(\"styles.css\") "
                             + "on the AppShellConfigurator.");
 

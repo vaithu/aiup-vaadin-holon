@@ -25,7 +25,8 @@ All illustrative code lives inside `SKILL.md` / `references/` files as fenced sn
     ├── agents/
     │   └── uc-coverage.md                   # read-only coverage auditor (drives /coverage-check)
     ├── rules/
-    │   ├── holon-stack.md                   # dependency allow/ban list + idioms
+    │   ├── holon-stack.md                   # dependency allow/ban list + idioms + holon-saas multi-tenancy
+    │   ├── country-variation.md             # where country-dependent rules live (GR-NNN, per country)
     │   ├── harness.md                       # the four layers + where a new rule belongs
     │   └── mcp-servers.md
     └── skills/
@@ -103,9 +104,9 @@ only for specs whose status claims completion.
 
 - **Domain:** plain JavaBean with `@DataPath` / `@Identifier` — **never** `PropertyBox`
 - **Property set:** `BeanPropertySet<T>` — never raw `PropertySet`
-- **Persistence:** Holon `Datastore` JDBC (or JPA only when JDBC cannot express the query, justified inline)
+- **Persistence:** Holon **JPA** `Datastore` through `BeanDatastore` and `BeanDatastoreHelper` (starter `holon-datastore-jpa-spring-boot`); raw Spring Data JPA or `EntityManager` only when `BeanDatastoreHelper` cannot express it, justified inline. The JDBC datastore is not used.
 - **UI:** `Components.input.*`, `PropertyListing`, `PropertyForm`, `form.setBean()` / `form.getBean()`
-- **Security:** Holon Auth (`AuthContext`, `Realm`, `Authenticator`, `@Authenticate`, `@RolesAllowed`, `Permission`) — not Spring Security
+- **Security:** Holon Auth (`AuthContext`, `Realm`, `Authenticator`, `@Authenticate`, `@RolesAllowed`, `Permission`) — not Spring Security, except the named `holon-saas` carve-out in `rules/holon-stack.md`
 - **DI:** prefer Holon `Context`; `@Autowired` is banned — inject via constructors
 - **Spring stereotype:** `@SpringBootApplication` always permitted; `@Service` / `@Component` / `@Repository` allowed only when a class needs Spring lifecycle (`@Transactional`, `@EventListener`, `@Scheduled`)
 - **Fallback policy:** raw Vaadin or Spring allowed only when Holon has no equivalent, justified inline with `// FALLBACK: no Holon equivalent for <thing>`
