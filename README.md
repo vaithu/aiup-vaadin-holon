@@ -149,6 +149,7 @@ seconds, which is the only property that makes them worth having.
 
 | Skill | Invocation | What it produces |
 |-------|-----------|-----------------|
+| `/holon-entity-model` | `/holon-entity-model [UC-XXX]` | Updates `docs/entity_model.md` in place from the requirements, specs and ADRs, applies the holon-saas conventions, and validates the result with a script |
 | `/flyway-migration` | `/flyway-migration` | Flyway `V*.sql` migration scripts from `docs/entity_model.md` |
 | `/implement` | `/implement UC-XXX` | JavaBean, `BeanPropertySet` model, Holon Datastore service, Vaadin view, and Holon Auth guards for a use case |
 | `/implement-from-html` | `/implement-from-html <file>` | Infers entities, roles, and Holon Vaadin components from an HTML mockup file |

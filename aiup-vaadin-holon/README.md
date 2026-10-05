@@ -55,7 +55,8 @@ first.
 
 | Skill | Slash command | Reads | Writes |
 |-------|--------------|-------|--------|
-| Flyway Migration | `/flyway-migration` | `docs/entity_model.md` | `src/main/resources/db/migration/V*.sql` |
+| Holon Entity Model | `/holon-entity-model` | requirements, use case specs, ADRs, `docs/entity_model.md` | `docs/entity_model.md` (updated in place, validated) |
+| Flyway Migration | `/flyway-migration` | `docs/entity_model.md` | `src/main/resources/db/tenant-migration/V*.sql` and `db/migration/V*.sql` |
 | Implement | `/implement UC-XXX` | use case spec + entity model | JavaBean, BeanPropertySet, Datastore service, Holon Vaadin view, Holon Auth guards |
 | Implement from HTML | `/implement-from-html <file>` | HTML mockup | same outputs as `/implement` (inferred) |
 | Datastore Test | `/datastore-test UC-XXX` | use case spec | JUnit 5 + Testcontainers integration tests |

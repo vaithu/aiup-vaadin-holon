@@ -30,6 +30,7 @@ All illustrative code lives inside `SKILL.md` / `references/` files as fenced sn
     │   ├── harness.md                       # the four layers + where a new rule belongs
     │   └── mcp-servers.md
     └── skills/
+        ├── holon-entity-model/              # /holon-entity-model — update the entity model in place, validated
         ├── flyway-migration/
         ├── implement/                       # /implement UC-XXX
         ├── implement-from-html/             # /implement-from-html <file>
@@ -88,6 +89,7 @@ only for specs whose status claims completion.
 
 | Phase        | Skill                    | Description                                                      |
 |--------------|--------------------------|------------------------------------------------------------------|
+| Construction | `/holon-entity-model`   | Update `docs/entity_model.md` in place for the Holon + holon-saas stack |
 | Construction | `/flyway-migration`      | Create Flyway V*.sql migrations from `docs/entity_model.md`      |
 | Construction | `/implement UC-XXX`      | Implement a use case: JavaBean, BeanPropertySet, Datastore service, Holon Vaadin view, Holon Auth guards |
 | Construction | `/implement-from-html`   | Infer entities, roles, Holon Vaadin components from an HTML mockup |
