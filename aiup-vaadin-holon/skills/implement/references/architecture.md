@@ -6,8 +6,8 @@ Inside every feature package all classes are **co-located in one flat package** 
 or `domain/` sub-packages are created.
 
 Cross-cutting concerns that are not part of a single feature (application shell, auth
-configuration, shared helpers such as `AuditUtil`, `AuditedBean`) live in a dedicated
-`shared` package.
+configuration, the audit base class, or `AuditUtil` and `AuditedBean` in a project without Spring Data auditing;
+see `audit-wiring.md`, "Which mode") live in a dedicated `shared` package.
 
 ---
 
@@ -64,14 +64,14 @@ com.example.<app>
 │   ├── LoginView.java             # @AnonymousAllowed login screen
 │   ├── SecurityConfig.java        # Realm @Bean, AccountProvider @Bean
 │   ├── AppAccount.java            # JavaBean mapped to app_account table
-│   ├── AuditUtil.java             # stampCreate / stampUpdate helpers
-│   ├── AuditedBean.java           # interface every domain bean implements
+│   ├── AuditedEntity.java         # audit base class every entity extends (Spring Data auditing)
+│   │                              #   (manual mode instead: AuditUtil.java + AuditedBean.java)
 │   ├── NotFoundView.java          # 404 error view
 │   ├── InternalErrorView.java     # 500 error view
 │   └── AccessDeniedView.java      # 403 error view
 │
 ├── catalog                        # feature: browse / search books
-│   ├── Book.java                  # JavaBean  (@DataPath, @Identifier, @Caption, AuditedBean)
+│   ├── Book.java                  # JavaBean  (@Caption, extends AuditedEntity)
 │   ├── BookModel.java             # Model interface (BeanPropertySet, PathProperty constants)
 │   ├── BookService.java           # BeanDatastoreHelper<Book> wrapper
 │   └── CatalogView.java           # @Route view — listing, search filter
@@ -247,7 +247,7 @@ Every feature needs two artefacts:
 
 ```java
 @DataPath("book")
-public class Book implements AuditedBean {
+public class Book extends AuditedEntity {
 
     @Identifier
     @DataPath("id")
@@ -263,12 +263,8 @@ public class Book implements AuditedBean {
     @DataPath("author")
     private String author;
 
-    // audit fields (mandatory on every domain bean — see bean-model.md)
-    private String  createdBy;
-    private Instant createdDate;
-    private String  lastModifiedBy;
-    private Instant lastModifiedDate;
-    @Version private Long version;
+    // the five audit and version fields come from AuditedEntity (see audit-wiring.md, "Which mode");
+    // without Spring Data auditing, declare them here and implement AuditedBean instead
 
     // standard getters / setters
 }
@@ -314,11 +310,9 @@ public class BookService {
 
     public void save(Book book) {
         if (book.getId() == null) {
-            AuditUtil.stampCreate(book);
-            helper.insert(book);
+            helper.insert(book);   // audit fields are filled by Spring Data auditing
         } else {
-            AuditUtil.stampUpdate(book);
-            helper.update(book);
+            helper.update(book);   // manual mode: AuditUtil.stampCreate / stampUpdate before each call
         }
     }
 
