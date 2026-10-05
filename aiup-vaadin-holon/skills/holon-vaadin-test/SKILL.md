@@ -22,7 +22,7 @@ Before writing any tests, verify that the view implementation for the use case e
 |---|---|
 | `docs/use_cases/UC-XXX-*.md` (the use case being tested) | `/use-case-spec` |
 | Vaadin view class for the use case (e.g. `src/main/java/**/*View.java`) | `/implement` |
-| `src/main/resources/db/migration/V*.sql` (Flyway migration scripts) | `/flyway-migration` |
+| at least one Flyway script in `src/main/resources/db/tenant-migration/` (holon-saas) or `src/main/resources/db/migration/` (single schema) | `/flyway-migration` |
 
 If any artifact is missing, **stop** and tell the user which skill to run first:
 > "No Vaadin view implementation found — run `/implement UC-XXX` first, then re-run `/holon-vaadin-test`."  
@@ -39,6 +39,13 @@ security) is available. Tests run in-memory without a browser, exercising the re
 Vaadin Flow component tree.
 
 Seed test data via Flyway test migrations in `src/test/resources/db/migration/`.
+
+> **holon-saas projects (schema per tenant).** Company data lives in a tenant schema created by
+> provisioning, so a seed that targets the default schema never reaches the tables the views read.
+> Put the seed with the other tenant scripts (`src/test/resources/db/tenant-migration/`, versions
+> from `V900`) and make sure the test tenant is provisioned before the context serves a request.
+> This plugin does not yet document how holon-saas provisions a tenant in a test: **verify it in
+> the holon-saas documentation and tell the user before writing the seed**; do not guess.
 
 Also test **role-gated visibility**: verify that buttons and sections requiring specific
 Holon Auth permissions appear or hide correctly for different roles. When the target app

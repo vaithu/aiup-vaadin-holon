@@ -19,13 +19,20 @@ Before writing any tests, verify that the implementation for the use case exists
 |---|---|
 | `docs/use_cases/UC-XXX-*.md` (the use case being tested) | `/use-case-spec` |
 | Service class for the use case (e.g. `src/main/java/**/*Service.java`) | `/implement` |
-| `src/main/resources/db/migration/V*.sql` (Flyway migration scripts) | `/flyway-migration` |
+| at least one Flyway script in `src/main/resources/db/tenant-migration/` (holon-saas) or `src/main/resources/db/migration/` (single schema) | `/flyway-migration` |
 
 If any artifact is missing, **stop** and tell the user which skill to run first:
 > "No service implementation found — run `/implement UC-XXX` first, then re-run `/datastore-test`."  
 > "No Flyway migration scripts found — run `/flyway-migration` first." (if no SQL migrations exist)
 
 Do not attempt to generate tests against unimplemented services.
+
+> **holon-saas projects (schema per tenant).** The example below applies one folder to one schema.
+> In a holon-saas project the entity tables are in `db/tenant-migration/` and are created **in a
+> tenant schema** (the platform tables in `db/migration/` go in the platform schema), and the
+> datastore must be bound to that tenant. This plugin does not yet document how to provision and
+> bind a tenant in a test: **verify it in the holon-saas documentation and tell the user before
+> writing the test setup**; do not copy the single-schema example unchanged.
 
 ## Instructions
 
