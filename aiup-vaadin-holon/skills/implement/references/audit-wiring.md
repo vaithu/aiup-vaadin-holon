@@ -1,5 +1,15 @@
 # Audit Wiring Reference
 
+## Which mode
+
+| The project has | Mode | What to do |
+|---|---|---|
+| Spring Data auditing wired to the signed-in user (holon-saas: `@EnableJpaAuditing(auditorAwareRef = "securityContextActorResolver")`) and an audit base class such as `AuditedEntity` | **Auditing** | Entities **extend the base class**. Do not create `AuditUtil` or `AuditedBean`, and never set the five fields by hand: the listener fills them, and a manual write would be overwritten or hide a wiring fault |
+| Neither (plain Holon Datastore, no Spring Data auditing) | **Manual** | Everything below: `AuditedBean`, `AuditUtil`, stamp before each save |
+
+Look for the base class and `@EnableJpaAuditing` before choosing. Everything below this table
+describes the **manual** mode only.
+
 This document explains how to populate the five mandatory audit fields
 (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`, `version`)
 before calling `BeanDatastoreHelper.save(...)` when using the **Holon Datastore**

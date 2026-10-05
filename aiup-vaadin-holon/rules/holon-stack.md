@@ -105,6 +105,18 @@ Do **not** silently fall back to raw Vaadin. Do **not** emit a `// FALLBACK:` co
 and continue. Wait for the developer's explicit guidance, then implement exactly what
 they specify.
 
+**UI source — components and CSS come from the library.** Every component and every style
+an application uses comes from the Holon Vaadin Flow library (`holon-vaadin-flow` and the
+`iyen-core` composites). Skills MUST NOT create a new component class, write CSS (no
+`styles.css` additions, no `@media` rules, no token overrides, **not even as a last resort**),
+or hard-code a colour, font or spacing in Java. When the library lacks something (an upload,
+a signature pad, a tree, a date-range picker, a PDF export), the skill **stops and asks**; the
+gap is closed in the library repository, where every project benefits, never in the
+application. Stylesheets the library itself ships (for example `context://grid-cell.css`) and
+the theme load (`@StyleSheet(Lumo.STYLESHEET)`) are not "writing CSS" and may be used.
+A project's own `CLAUDE.md` may state this rule too; where a skill allows more (for example a
+CSS "last resort"), the stricter project rule wins.
+
 **Spring stereotypes** — Skills MAY emit `@Service`, `@Component`, and `@Repository`
 **when the class needs to participate in Spring's lifecycle** (e.g. `@Transactional`,
 `@EventListener`, `@Scheduled`, Spring Data callbacks). No `// FALLBACK:` comment is
@@ -207,7 +219,7 @@ Skills MUST refuse to emit code containing any of the following. Verification:
 | `org.springframework.security.core.*` | Spring Security | Holon Auth: `Realm`, `Authenticator`, `AuthContext`, `Permission` |
 | `org.springframework.security.config.*` | Spring Security config | Holon Auth bootstrap + filter-chain wiring only if Holon Auth requires it |
 | `com.vaadin.flow.i18n.I18NProvider` and direct `UI.getCurrent().getTranslation(...)` usage | Keep localization consistent with Holon stack conventions | Holon Core i18n (`Localizable` + `LocalizationContext.require().getMessage(key, fallback)`) |
-| `@Theme("<app-name>")` (`com.vaadin.flow.theme.Theme`) | Deprecated in Vaadin 25.3 — the `themes/<name>/` directory approach is removed | `@StyleSheet(Lumo.STYLESHEET)` (or `Aura.STYLESHEET`) followed by `@StyleSheet("styles.css")` on `AppShellConfigurator`; custom CSS in `src/main/resources/META-INF/resources/styles.css` |
+| `@Theme("<app-name>")` (`com.vaadin.flow.theme.Theme`) | Deprecated in Vaadin 25.3 — the `themes/<name>/` directory approach is removed | `@StyleSheet(Lumo.STYLESHEET)` (or `Aura.STYLESHEET`) on `AppShellConfigurator`; no CSS is written (see *UI source* above) |
 
 > **Spring stereotypes note:** `@Service`, `@Component`, and `@Repository` are **permitted**
 > (see *Allowed Dependencies*) when the class needs Spring lifecycle participation, but
