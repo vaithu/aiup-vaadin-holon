@@ -132,7 +132,7 @@ Read `docs/architecture/screens.md` (the project's screen map) **before writing 
 - [ ] **Two-locale i18n**: `messages.properties` (English default) plus a `messages_<lang>.properties` sibling for every additional supported language, same key set, `.encoding("UTF-8")` on the `MessageProvider`, and a `LocalizationContext` wired per Vaadin session (see [`references/app-shell-defaults.md`](references/app-shell-defaults.md))
 - [ ] Full compilation verified (`./mvnw compile` or `./gradlew compileJava`)
 - [ ] **Demo data seeded** (`demo` Spring profile, `src/main/resources/db/demo-seed/V9NN__demo_seed_<entity>.sql`, 5–10 realistic rows per entity + at least one row per lookup table) — see [`references/demo-data-and-visual-verification.md`](references/demo-data-and-visual-verification.md)
-- [ ] **Mandatory visual verification performed**: app run with the `demo` profile, implemented view(s) screenshotted with data loaded, compared region-by-region against the mockup/Visual Region Inventory — no `Full`-fidelity region rendered empty; screenshots + comparison notes attached to the final report
+- [ ] **Mandatory visual verification performed**: app run with the `demo` profile, implemented view(s) screenshotted with data loaded, compared region-by-region against the mockup and its Visual Region Inventory **when the project has one**, otherwise against the use case flows and the screen map — no region rendered empty; screenshots + comparison notes attached to the final report
 
 ## Workflow
 

@@ -13,7 +13,10 @@ of every `/implement`, `/implement-master-detail`, and `/implement-from-html` in
 1. **Seed realistic demo data** so the view is never empty when it's verified.
 2. **Take a screenshot of the running view and compare it region-by-region against the
    mockup**, using the Visual Region Inventory / Fidelity note already produced during
-   implementation. Do not declare the skill "done" until this comparison has been performed.
+   implementation. **When the project has no mockup** (no `mockups/` folder, none named in the use
+   case), compare against the use case flows and the screen map instead: every action the use case
+   names is reachable on the screen and every list or panel shows seeded data. Do not declare the
+   skill "done" until this comparison has been performed.
 
 ## What "100% match" actually means here
 
@@ -80,7 +83,7 @@ Perform this immediately after Step A, before declaring the skill's work complet
    in your environment — a Playwright script (see `../../playwright-test/SKILL.md`), the
    `open_browser_page` / `screenshot_page` browser tools if available, or the project's own
    dev server plus a manual screenshot tool.
-4. **Open the source mockup HTML file directly** (`file:///.../mockups/.../<view>.html`) and
+4. **If there is a mockup, open the source mockup HTML file directly** (`file:///.../mockups/.../<view>.html`) and
    take a screenshot of it too, for side-by-side reference.
 5. **Compare region-by-region against the Visual Region Inventory** produced during
    implementation (see `implement-from-html/SKILL.md` Step 4b or the equivalent inventory in
