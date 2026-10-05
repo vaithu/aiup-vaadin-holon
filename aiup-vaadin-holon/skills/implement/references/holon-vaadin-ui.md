@@ -562,15 +562,7 @@ group.setValue(existingBox);
 
 > ⚠️ **FORM RULE**: Do **not** build a form by placing `Input` fields inside a `FormLayout`. Use `EntityFormPanel` for all create / edit / detail screens. `Components.formLayout()` is only for non-form layouts (e.g. side-by-side filter panels or multi-column display regions).
 
-> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For
-> **simpler** responsive behaviour (mobile/desktop slot swaps, column counts, hiding/showing
-> regions) prefer the component responsive APIs below (`ResponsiveDiv`,
-> `FormLayout.responsiveSteps(...)`, `UIUtils` step maps, `MasterDetailLayout`,
-> `mobileViewColumn`). For **complex** responsive behaviour (fine-grained breakpoints, spacing,
-> sticky bars, presentation changes CSS expresses more cleanly) use plain CSS `@media` queries
-> and styles in `src/main/resources/META-INF/resources/styles.css`, targeting a CSS class you
-> add to the component.
-> See `implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
+> 📐 **Responsiveness — from the component APIs only.** Use `ResponsiveDiv`, `FormLayout.responsiveSteps(...)`, `MasterDetailLayout` + `Sheet` and `mobileViewColumn(...)`. A layout they cannot express is a gap in the library (stop and ask); **no CSS `@media` rules are written** — see `rules/holon-stack.md`, "UI source".
 
 Prefer Holon layout builders over raw Vaadin layout constructors.
 

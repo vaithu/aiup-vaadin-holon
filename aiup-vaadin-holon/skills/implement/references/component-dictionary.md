@@ -299,10 +299,7 @@ Shortcut: `Components.button().text("Save").primary().build()` (delegates to `Bu
 
 ### 7 · Form layout
 
-> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For simpler
-> responsive layout prefer the component responsive APIs (`ResponsiveDiv`, `responsiveSteps(...)`);
-> use plain CSS `@media` queries in `styles.css` for complex responsive behaviour. See
-> `css-extraction.md` §"Responsive breakpoints with `@media`".
+> 📐 **Responsiveness — from the component APIs only.** Use `ResponsiveDiv`, `FormLayout.responsiveSteps(...)`, `MasterDetailLayout` + `Sheet` and `mobileViewColumn(...)`. A layout they cannot express is a gap in the library (stop and ask); **no CSS `@media` rules are written** — see `rules/holon-stack.md`, "UI source".
 
 ```java
 // com.holonplatform.vaadin.flow.components.builders.FormLayoutBuilder

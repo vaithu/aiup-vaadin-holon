@@ -17,7 +17,7 @@ identified in a mockup. If no Holon equivalent exists, **stop immediately and as
 | Step card inside creation page | `Components.formStepCard().stepNumber(n).totalSteps(N).title("...").content(...).build()` → `FormStepCard` | |
 | App shell / main layout | `Components.appShell().navbarBrand("...").nav(nav).build()` → `AppShellLayout` | |
 | Side nav | `SideNavBuilder.create().withNavItem("Label", View.class, VaadinIcon.X.create()).add().buildWrapper()` | |
-| Responsive viewport slots (mobile/desktop) | Prefer `ResponsiveDiv.configure(this).slotOnce(ViewMode.DESKTOP, ()->...).build()` for simpler cases; use CSS `@media` in `styles.css` for complex responsive behaviour | See `css-extraction.md` §"Responsive breakpoints with `@media`" |
+| Responsive viewport slots (mobile/desktop) | `ResponsiveDiv.configure(this).slotOnce(ViewMode.DESKTOP, ()->...).build()`; what it cannot express is a library gap, no `@media` CSS is written | `rules/holon-stack.md`, "UI source" |
 | Breadcrumb | `BreadcrumbItem` / `BreadcrumbPage` (from `com.iyensoft.vaadin.flow.components`) | |
 | Tab bar (bare selector) | `TabsBuilder.create().withTab("A","B","C").build()` — produces a bare `Tabs` selector; wire content via `addSelectedChangeListener` | See `TabsDemoView`; use `LazyTabsBuilder` for built-in lazy switching |
 | Tab bar with counter badges | `TabsBuilder.create().withTab("Inbox", 12).withTab("Drafts", 3).build()` | `withTab(label, count)` appends a numeric badge |

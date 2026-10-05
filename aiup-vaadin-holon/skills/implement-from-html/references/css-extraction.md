@@ -1,5 +1,7 @@
 # CSS Extraction Reference
 
+> ⚠️ **Read-only reference under the project UI rule.** `rules/holon-stack.md`, "UI source", forbids writing CSS (no `styles.css` additions, no `@media` rules, not even as a last resort). Use this document only to **read** a mockup's colours, fonts and spacing and to report what the library cannot express as a library gap. The file-writing instructions below apply only to a project whose `CLAUDE.md` explicitly allows its own CSS.
+
 Extract visual tokens from an HTML mockup's CSS and map them to **Lumo custom properties**
 in a plain CSS file. This keeps all styling in `src/main/resources/META-INF/resources/styles.css`
 and out of Java code.

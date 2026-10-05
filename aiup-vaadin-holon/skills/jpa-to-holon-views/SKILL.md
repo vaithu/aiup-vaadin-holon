@@ -62,12 +62,7 @@ A use case is the unit of work, not a view. A single use case may produce one vi
 
 Every entity that needs a UI **must** be implemented as exactly two views. Let the spec drive the routes, but the structure below is mandatory.
 
-> 📐 **Responsiveness — `ResponsiveDiv` for simple cases, CSS for complex cases.** For simpler
-> responsive behaviour (mobile/desktop slot swaps like the desktop/mobile pattern and
-> `MasterDetailLayout` + `Sheet` below) prefer the component responsive APIs. For complex
-> responsive behaviour (fine-grained breakpoints, spacing, column counts, hide/show) use plain
-> CSS `@media` queries and styles in `src/main/resources/META-INF/resources/styles.css`. See
-> `../implement-from-html/references/css-extraction.md` §"Responsive breakpoints with `@media`".
+> 📐 **Responsiveness — from the component APIs only.** Use `ResponsiveDiv`, `FormLayout.responsiveSteps(...)`, `MasterDetailLayout` + `Sheet` and `mobileViewColumn(...)`. A layout they cannot express is a gap in the library (stop and ask); **no CSS `@media` rules are written** — see `rules/holon-stack.md`, "UI source".
 
 ### View 1 — List View (`<Entity>ListView`)
 

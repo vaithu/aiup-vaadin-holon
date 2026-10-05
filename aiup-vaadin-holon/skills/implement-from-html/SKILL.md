@@ -81,7 +81,7 @@ confirmation before proceeding.
 - [ ] No `PropertyBox` in emitted code
 - [ ] **JPA anti-pattern guardrail** — if any JPA code or `spring.jpa.*` property was emitted, it was scanned against [`../../rules/jpa-anti-patterns.md`](../../rules/jpa-anti-patterns.md): zero 🛑 findings, every ⚠️ carries a `// JPA-WAIVER(<id>):` comment, and the guardrail report appears in the Step 8 summary. Note that inferred dropdown values become lookup-table FKs — never `@Enumerated` enums (`JPA-005`)
 - [ ] No `@Autowired` — dependencies injected via constructors (`@Service`/`@Component`/`@Repository` only when Spring lifecycle is required)
-- [ ] CSS added only as a last resort — new CSS is permitted **only when** the built-in Holon/Vaadin component styling cannot achieve the required visual result; if CSS is needed, add it to `src/main/resources/META-INF/resources/styles.css` (loaded via `@StyleSheet("styles.css")` on `AppShellConfigurator` after `@StyleSheet(Lumo.STYLESHEET)`) and justify with a comment
+- [ ] **UI source**: no CSS written (no `styles.css` additions, no `@media` rules, not even as a last resort), no new component class, no colour, font or spacing hard-coded in Java; what the library cannot express is a `Manual` region that is raised and recorded as a library gap - see `rules/holon-stack.md`, "UI source". Library-shipped stylesheets (`context://...`) and the Lumo theme load are allowed
 - [ ] **Component inventory**: before emitting, verify every region maps to an exact Holon class from `references/html-mapping.md`; for any region with ⚠️ **stop and ask the developer** before proceeding
 - [ ] Auth guard on every `@Route` that requires a role
 - [ ] Full compilation verified
@@ -297,7 +297,7 @@ and record its mapping status.
 | 3 | Master list panel | `MasterDetailLayout` | Full |
 | 4 | Detail form — Account & terms card | `EntityFormPanel` | Full |
 | 5 | Status filter chips | `Input.singleSelect()` toolbar | Full |
-| 6 | Dark 360° summary strip with gradient | Plain `Div` + `styles.css` | Partial — gradient/animation manual |
+| 6 | Dark 360° summary strip with gradient | Plain `Div` (structure only) | Partial — gradient/animation not reproduced; recorded as a library gap |
 | 7 | AR aging progress bar | ⚠️ No Holon equivalent | Manual — stop and ask |
 | 8 | Activity feed / timeline | `Components.timelineStepper()` if steps known | Partial — stop and ask if dynamic |
 | 9 | File upload row | ⚠️ No Holon equivalent | Manual — stop and ask |
@@ -307,13 +307,13 @@ and record its mapping status.
 
 | Value | Meaning |
 |-------|---------|
-| `Full` | Holon component covers the region completely — no custom CSS needed |
-| `Partial` | Holon component covers the structure; custom CSS in `styles.css` needed for decoration (gradient, shadow, animation) |
+| `Full` | Holon component covers the region completely — nothing custom needed |
+| `Partial` | Holon component covers the structure; the decoration (gradient, shadow, animation) is **not** reproduced and is listed as a library gap — no CSS is written |
 | `Manual` | No Holon equivalent exists — **stop and ask the developer** before proceeding with this region |
 
 **Rules:**
 - Every region with `Manual` fidelity MUST be raised as a question to the developer before any code for that region is written.
-- Every region with `Partial` fidelity MUST have a corresponding CSS block added to `styles.css` with an inline comment explaining what the component system cannot express.
+- Every region with `Partial` fidelity MUST be listed in the report as a library gap (what the component system cannot express); **never** add CSS to close it.
 - Do not silently skip any region — if a region is purely decorative and has no functional impact, record it as `Full` with note `decorative only — no component needed`.
 
 ### Step 5: Extract UI copy to Holon i18n keys
@@ -332,10 +332,10 @@ and record its mapping status.
 
 ### Step 6: Styling rule
 
-- **Prefer** existing Holon/Vaadin component styling defaults and component variants — use them first.
-- Add new CSS to `src/main/resources/META-INF/resources/styles.css` **only when** the built-in component CSS cannot achieve the required visual result; justify each addition with an inline comment (e.g. `/* FALLBACK CSS: Holon component defaults do not support <reason> */`).
-- Load Lumo via `@StyleSheet(Lumo.STYLESHEET)` on the `AppShellConfigurator` class, then `@StyleSheet("styles.css")` for your overrides — **not** via the deprecated `@Theme` annotation.
-- Do **not** translate every mockup colour, font, or spacing value into CSS wholesale — only override what the component system genuinely cannot express.
+- Use the component styling the library provides, and its variants and semantic builders (`.primary()`, `.error()`, ...). **Write no CSS** - see `rules/holon-stack.md`, "UI source".
+- Load Lumo via `@StyleSheet(Lumo.STYLESHEET)` on the `AppShellConfigurator` class — **not** via the deprecated `@Theme` annotation. Add no other stylesheet except one the library ships (`context://...`).
+- A mockup colour, font, spacing or shadow the library cannot express is **not** translated to CSS; list it as a library gap in the Step 8 report.
+- Responsive behaviour comes from the component APIs (`ResponsiveDiv`, `FormLayout.responsiveSteps(...)`, `MasterDetailLayout`, `mobileViewColumn`); a layout they cannot express is a library gap, not a reason for `@media` rules.
 
 ### Step 7: Implement (same layers as `/implement`)
 
@@ -357,7 +357,7 @@ Do this immediately after Step 7, before Step 8's fidelity report. Never verify 
 empty database — see [`../implement/references/demo-data-and-visual-verification.md`](../implement/references/demo-data-and-visual-verification.md)
 for the full recipe. In short:
 
-1. Add a `demo` Spring profile (`spring.flyway.locations=classpath:db/migration,classpath:db/demo-seed`
+1. Add a `demo` Spring profile (`spring.flyway.locations` = the project's own migration folder(s) — `db/tenant-migration` for holon-saas, else `db/migration` — plus `classpath:db/demo-seed`
    in `application-demo.properties`) and write `V9NN__demo_seed_<entity>.sql` scripts seeding
    5–10 rows per entity — reuse the mockup's own visible sample names/numbers (e.g. the exact
    customer names shown in the HTML) so the verification screenshot reads like the mockup, not
@@ -368,7 +368,7 @@ for the full recipe. In short:
 5. Compare region-by-region against the Step 4b Visual Region Inventory:
    - Every `Full` region must be visible **and populated** — an empty/zeroed `Full` region is a
      regression; fix the seed data, fetch binding, or filter and re-verify before continuing.
-   - `Partial` regions only need their structural container to match (decorative CSS may differ).
+   - `Partial` regions only need their structural container to match (decoration may differ; it is a recorded library gap).
    - `Manual` / out-of-scope regions must already be raised in Step 4b/8's unresolved-regions list,
      not silently missing.
 6. Carry both screenshots and the comparison notes into the Step 8 report.
@@ -392,7 +392,7 @@ Developer input is required before these can be built:
 
 | Region | Description | Suggested options |
 |--------|-------------|-------------------|
-| AR aging bar | Horizontal segmented progress bar showing invoice aging buckets | Option A: Use a Vaadin `ProgressBar` with custom CSS segments. Option B: Use a third-party chart library. Confirm which to use. |
+| AR aging bar | Horizontal segmented progress bar showing invoice aging buckets | Option A: ask for a progress-bar component in the library (library work). Option B: use a third-party chart library. Confirm which to use. |
 | File upload row | Drag-and-drop file upload widget | Option A: Use Vaadin `Upload` component directly (requires `com.vaadin` import exemption). Option B: Use a third-party component. Confirm which to use. |
 ```
 
@@ -401,7 +401,7 @@ If all regions were resolved, print:
 
 **C) Fidelity declaration** — print the full Visual Region Inventory table from Step 4b
 as a fidelity summary so the developer can see at a glance what was fully implemented,
-what needed custom CSS, and what was not implemented:
+what is a library gap (decoration not reproduced), and what was not implemented:
 
 ```
 ## Fidelity declaration

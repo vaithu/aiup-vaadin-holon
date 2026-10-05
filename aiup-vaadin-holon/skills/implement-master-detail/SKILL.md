@@ -20,7 +20,7 @@ Before writing any code, verify that all three artifacts exist:
 |---|---|
 | `docs/use_cases/UC-XXX-*.md` (the use case being implemented) | `/use-case-spec` |
 | `docs/entity_model.md` | `/entity-model` |
-| `src/main/resources/db/migration/V*.sql` (at least one Flyway script) | `/flyway-migration` |
+| at least one Flyway script in `src/main/resources/db/tenant-migration/` (holon-saas) or `src/main/resources/db/migration/` (single schema) | `/flyway-migration` |
 
 If any file is missing, **stop** and tell the user which skill to run first:
 > "`docs/use_cases/UC-XXX-*.md` not found — run `/use-case-spec UC-XXX` first."  
@@ -94,7 +94,7 @@ and `playwright-test` skills for that.
 - [ ] Action buttons use `.primary()` / `.secondary()` / `.tertiary()` / `.error()` — never raw `ButtonVariant`
 - [ ] Notifications via `NotificationUtil.notificationSuccess/Error(…)` or `NotificationBuilder`
 - [ ] **AppBar defaults**: the shell has a working global search field, a notifications bell, a user avatar with a working Sign out action, and a language switcher (English + at least one additional locale) with two message bundles (`messages.properties` + `messages_<lang>.properties`) — see [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md); `.languages(...)`/`.user(...).menu(...)` render but do not wire clicks, so build working equivalents via `customizeEnd(...)`
-- [ ] Visual tokens in `src/main/resources/META-INF/resources/styles.css` — not hard-coded in Java
+- [ ] **UI source**: no CSS written, no new component class, no colour, font or spacing hard-coded in Java; a gap in the library is raised and recorded, not closed in the project - see `rules/holon-stack.md`, "UI source"
 - [ ] All `Instant` fields map to `TIMESTAMPTZ`; timezone captured in `MainLayout.onAttach` via `ExtendedClientDetails`; displayed timestamps formatted via `DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withZone(sessionZone())`
 - [ ] Full compilation verified (`./mvnw compile` or `./gradlew compileJava`)
 - [ ] **File-set complete**: every file listed in "Emitted File Set (deterministic)" has been created — no file omitted
@@ -149,14 +149,14 @@ derived from the reference implementation in `demo/crm-minimal/src/main/java/com
 
 | File | Purpose |
 |---|---|
-| `src/main/resources/META-INF/resources/styles.css` | CSS custom properties / design tokens (no hard-coded colours in Java) |
+| (no stylesheet) | No CSS is written; styling comes from the library - see `rules/holon-stack.md`, "UI source" |
 | `src/main/resources/messages.properties` | All `Localizable` message keys |
-| `src/main/resources/db/migration/V*.sql` | Flyway DDL for the entity + lookup tables (created by `/flyway-migration`) |
+| `src/main/resources/db/tenant-migration/V*.sql` (or `db/migration/`) | Flyway DDL for the entity + lookup tables (created by `/flyway-migration`) |
 
 > **Rule**: mobile screens share the **same** Java class as the desktop screen. Never emit a
 > `<Entity>MobileListView`, `<Entity>MobileDetailView`, `New<Entity>MobileView`, or any other
 > `*Mobile*`-named class. Mobile behaviour is achieved through responsive Holon components
-> (`MasterDetailLayout.withMobileSheet`, `ChipGroup`, `HeroStrip` responsive CSS, `StickyActionBar`).
+> (`MasterDetailLayout.withMobileSheet`, `ChipGroup`, `HeroStrip`, `StickyActionBar`).
 
 ## Workflow
 
@@ -172,18 +172,18 @@ derived from the reference implementation in `demo/crm-minimal/src/main/java/com
 10. Read [`../implement/references/context-wiring.md`](../implement/references/context-wiring.md) — Holon Context wiring
 11. Read [`../implement/references/navigation.md`](../implement/references/navigation.md) — `Navigator.get()`, `@QueryParameter`, `@OnShow`, URL sync
 12. Read [`../implement/references/error-handling.md`](../implement/references/error-handling.md) — validation errors, optimistic-lock, global error views
-13. Read [`../implement/references/audit-wiring.md`](../implement/references/audit-wiring.md) — `AuditUtil`, audit field stamping
+13. Read [`../implement/references/audit-wiring.md`](../implement/references/audit-wiring.md) — §"Which mode" first: extend the audit base class where Spring Data auditing is wired, else `AuditUtil`
 14. Read [`../implement/references/app-configuration.md`](../implement/references/app-configuration.md) — `application.yml`, BOM imports, JVM flags
 15. Read [`../implement/references/architecture.md`](../implement/references/architecture.md) — package-by-feature layout, co-location rules
 16. Check existing code for patterns and conventions
 17. **Feature package**: all classes go in `com.example.<app>.<feature>` — bean, model, service, view co-located
 18. **Domain + Model**: JavaBean(s) with `@DataPath` / `@Identifier`, `@Caption(value, messageCode)` on every user-visible field, Jakarta Bean Validation constraints on the bean
-19. **Service**: `BeanDatastoreHelper<T>`-backed service; `AuditUtil.stampCreate` / `stampUpdate` before persistence
+19. **Service**: `BeanDatastoreHelper<T>`-backed service; stamp audit fields with `AuditUtil.stampCreate` / `stampUpdate` only in manual mode — never where Spring Data auditing is wired
 20. **List view**: `MasterDetailLayout` — master side is a `ListingBundle` with `ChipGroup` filter, `StatusBadge` / `Tag` column renderers; detail side opens via URL sync on desktop and `Sheet` on mobile
 21. **Detail panel**: `HeroStrip` at top → `lazyTabs()` → per-tab cards: `EntityFormPanel.readOnly()` for fields, `ArAgingBar` for aging, `ListingBundle` for sub-tables, `TimelineStepper` for activity
 22. **New-entity form**: `EntityCreationForm` + one `FormStepCard` per logical section + `StickyActionBar` + right-panel `LivePreviewCard` + `ChecklistPanel`
 23. **Error views**: ensure `NotFoundView`, `InternalErrorView`, `AccessDeniedView` exist in `shared`
-24. **Theme**: `@StyleSheet(Lumo.STYLESHEET)` + `@StyleSheet("styles.css")` on `AppShellConfigurator`; custom tokens in `styles.css`
+24. **Theme**: `@StyleSheet(Lumo.STYLESHEET)` on `AppShellConfigurator`; no other stylesheet and no CSS written (`rules/holon-stack.md`, "UI source")
 25. **Timezone**: `MainLayout.onAttach` → `ExtendedClientDetails` → `ZoneId` stored in `VaadinSession`; `sessionZone()` helper used wherever timestamps are displayed
 26. Run the Pre-Emit Checklist — fix every violation before proceeding
 27. Verify full compilation
@@ -202,7 +202,7 @@ derived from the reference implementation in `demo/crm-minimal/src/main/java/com
 - [`../implement/references/context-wiring.md`](../implement/references/context-wiring.md) — `Context.get()`, Holon Spring Boot auto-config
 - [`../implement/references/navigation.md`](../implement/references/navigation.md) — `Navigator.get()`, `@QueryParameter`, `@OnShow`, URL sync
 - [`../implement/references/error-handling.md`](../implement/references/error-handling.md) — `ValidationException`, `DataAccessException`, optimistic-lock, global error views
-- [`../implement/references/audit-wiring.md`](../implement/references/audit-wiring.md) — `AuditUtil`, `AuditedBean`, audit field stamping
+- [`../implement/references/audit-wiring.md`](../implement/references/audit-wiring.md) — audit modes (base class vs `AuditUtil`/`AuditedBean`)
 - [`../implement/references/app-configuration.md`](../implement/references/app-configuration.md) — `application.yml`, BOM imports, JVM timezone flag
 - [`../implement/references/architecture.md`](../implement/references/architecture.md) — package-by-feature layout, co-location rules
 - [`../implement/references/app-shell-defaults.md`](../implement/references/app-shell-defaults.md) — mandatory AppBar elements (search, notifications, user/sign-out menu, language switcher) and the two-locale i18n bundle + `LocalizationContext` wiring, ArchUnit enforcement
