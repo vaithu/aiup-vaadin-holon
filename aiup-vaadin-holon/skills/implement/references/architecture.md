@@ -226,7 +226,7 @@ public class LoginView extends Layout { ... }
 public List<Loan> findLoansForCurrentUser() {
     AuthContext ctx = AuthContext.require();
     if (ctx.isPermitted("loan:manage")) {
-        return helper.findAll();                         // librarian: all loans
+        return helper.findTop(100).toList();             // librarian: bounded; there is no unbounded findAll()
     }
     String username = ctx.requireAuthentication().getName();
     Long memberId = resolveMemberId(username);
@@ -302,7 +302,7 @@ public class BookService {
         this.helper = BeanDatastoreHelper.of(Book.class, datastore);
     }
 
-    public List<Book> findAll() { return helper.findAll(); }
+    public List<Book> findPage(int page, int pageSize) { return helper.findPage(page, pageSize).toList(); }
 
     public Optional<Book> findById(Long id) {
         return helper.findOne(BookModel.ID.eq(id));

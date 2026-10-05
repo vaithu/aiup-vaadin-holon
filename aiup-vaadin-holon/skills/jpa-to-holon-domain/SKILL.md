@@ -179,7 +179,7 @@ public interface CountryModel {
 ```
 
 Use the typed constants (`NumericProperty`, `StringProperty`, `BooleanProperty`,
-`TemporalProperty`). A `BooleanProperty` has `eq(true)`, **not** `isTrue()`. Constants are
+`TemporalProperty`). A `BooleanProperty` has `isTrue()` and `isFalse()` once the holon-core change is in; with 12.0.0 use `eq(true)`. Constants are
 `SCREAMING_SNAKE_CASE`; an embedded path is `"billingAddress.city"`. A `PropertySet` used with
 the datastore declares `.withIdentifier(ID)`.
 
@@ -252,8 +252,9 @@ Rules:
 - **Constructor injection only.** The `Datastore` is a Spring bean; never `Context.get()`.
 - **Transaction boundary is the service method.** Reads `@Transactional(readOnly = true)`,
   writes `@Transactional`; no `@Transactional` on a view (`JPA-038`).
-- **`BeanDatastoreHelper` has no sort-only `findAll`.** To sort without filtering, pass a
-  filter every row passes: `findAll(Model.ID.isNotNull(), Model.NAME.asc())`.
+- **`BeanDatastoreHelper` has no unbounded `findAll()` and no sort-only overload**, on purpose.
+  Read a list with `findPage(page, size, sort)` or `findSlice(limit, offset, sort)`; use
+  `findAll(filter, sort)` only for a set the filter keeps small, and never with a null filter.
 - **A `Stream` is lazy**: the caller must be inside a transaction and close it with
   try-with-resources (`JPA-035`, `JPA-036`). Never `.toList()` in a UI fetch callback.
 - **Never return `PropertyBox`.** Log every write at `INFO` with a readable field.
@@ -288,7 +289,7 @@ Fix every error before the next entity. Common ones:
 | Error | Fix |
 |---|---|
 | `cannot find symbol: BeanDatastoreHelper` | import `com.holonplatform.core.datastore.beans.BeanDatastoreHelper` |
-| `findAll(QuerySort)` not applicable | no sort-only overload; see Step 5 |
+| `findAll(QuerySort)` or `findAll()` not found | removed on purpose; use `findPage` / `findSlice`, see Step 5 |
 | `isTrue()` not found on `BooleanProperty` | use `eq(true)` |
 | tests fail at start with `IllegalAccessError … KotlinReflectionUtils` | mixed JUnit versions; import `org.junit:junit-bom` (see `holon-stack.md`, Parent POM) |
 | `No qualifying bean of type 'Datastore'` | the holon-saas / Holon JPA starter is missing from the classpath |

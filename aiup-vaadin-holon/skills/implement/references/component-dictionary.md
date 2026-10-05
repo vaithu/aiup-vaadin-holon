@@ -35,7 +35,8 @@ The catalogue was checked against the library source (`holon-vaadin-flow`, `iyen
 | `new Tag(VaadinIcon, Localizable)` | constructors `(VaadinIcon, String[, Color.Text])` and `(Component, Localizable)` | `Tag.java` |
 | `NotificationUtil.notificationSuccess/Error(Localizable)` | `String` (or `ValidationException`) only | `NotificationUtil` |
 | `Components.appShell().navbarBrand(Localizable)` | `String` only | `AppShellLayoutConfigurator` |
-| `Components.input.*`, `BooleanProperty.isTrue()` | neither exists; use `Input.string()` etc. and `BooleanProperty.eq(true)` | — |
+| `Components.input.*` | does not exist; use `Input.string()` etc. | — |
+| `BooleanProperty.isTrue()` / `isFalse()` | added to holon-core after 12.0.0; with 12.0.0 use `eq(true)` | holon-core `BooleanProperty` |
 | `holon-starter-vaadin-flow` brings the components | it does **not** bring `iyen-core`; declare `com.iyensoft.vaadin:iyen-core` | `holon-saas` / app `pom.xml` |
 
 **Not in the library** (no builder found): file or photo upload, signature capture, tree, print or PDF export, and a documented date-range picker (a `DateRangeField` exists only in an `internal` package). For these the rule below applies: stop and ask the developer.

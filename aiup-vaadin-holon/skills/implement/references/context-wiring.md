@@ -47,8 +47,8 @@ public class BillService {
         this.helper = BeanDatastoreHelper.of(BeanDatastore.of(datastore), Bill.class);
     }
 
-    public Stream<Bill> findAll() {
-        return helper.findAll();
+    public Stream<Bill> findPage(int page, int pageSize) {
+        return helper.findPage(page, pageSize);   // bounded; BeanDatastoreHelper has no unbounded findAll()
     }
 }
 

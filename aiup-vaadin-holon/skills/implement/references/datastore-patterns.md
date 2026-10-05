@@ -48,7 +48,7 @@ public interface BillModel {
     //   NumericProperty  → .count(), .sum(), .avg(), .min(), .max()
     //   StringProperty   → .contains(), .startsWith(), .endsWith(), case-insensitive variants
     //   TemporalProperty → .year(), .month(), .day(), .hour()
-    //   BooleanProperty  → .eq(true), .eq(false)  (no isTrue()/isFalse())
+    //   BooleanProperty  → .isTrue(), .isFalse()  (after the holon-core change; with 12.0.0 use .eq(true) / .eq(false))
     NumericProperty<Long>        ID           = PROPERTY_SET.propertyNumeric("id");
     StringProperty               VENDOR_NAME  = PROPERTY_SET.propertyString("vendorName");
     StringProperty               INVOICE_NO   = PROPERTY_SET.propertyString("invoiceNumber");
@@ -98,11 +98,12 @@ public class BillService {
 ### Find all — no filter
 
 ```java
-// All records — returns Stream<T>, which is a lazy server-side cursor
+// Reads are bounded: there is no findAll() without a filter. A page is a Stream<T>, a lazy cursor.
 // Prefer Stream<T> in UI fetch callbacks; only call .toList() for in-memory
 // processing outside the UI (e.g. batch jobs, exports).
-Stream<Bill> all = helper.findAll();
-// List<Bill> list = helper.findAll().toList();  // ← AVOID in UI fetch callbacks
+Stream<Bill> page = helper.findPage(0, 50, BillModel.DUE_DATE.asc());
+// For a set the filter keeps small: helper.findAll(filter) — the filter must not be null.
+// List<Bill> list = helper.findPage(0, 50).toList();  // ← AVOID in UI fetch callbacks
 ```
 
 ### Find all — with filter

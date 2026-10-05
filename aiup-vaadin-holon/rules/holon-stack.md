@@ -346,7 +346,7 @@ Use **typed sub-types** wherever available — they expose the richer query expr
 - `NumericProperty<T>` → `.count()`, `.sum()`, `.avg()`, `.min()`, `.max()`
 - `StringProperty` → `.contains()`, `.startsWith()`, `.endsWith()`, case-insensitive variants
 - `TemporalProperty<T>` → `.year()`, `.month()`, `.day()`, `.hour()`
-- `BooleanProperty` → `.eq(true)`, `.eq(false)` (there is no `isTrue()` / `isFalse()`)
+- `BooleanProperty` → `.isTrue()`, `.isFalse()` (added to holon-core after 12.0.0; with 12.0.0 use `.eq(true)`, `.eq(false)`)
 
 ```java
 // e.g. OrderModel.java — same feature package as Order.java
@@ -383,10 +383,10 @@ import com.holonplatform.core.datastore.beans.BeanDatastoreHelper;
 BeanDatastoreHelper<Order> helper =
     BeanDatastoreHelper.of(BeanDatastore.of(datastore), Order.class);
 
-// Find all
-Stream<Order> all = helper.findAll();
+// Read a bounded page (there is no unbounded findAll())
+Stream<Order> firstPage = helper.findPage(0, 50, OrderModel.CREATED_AT.desc());
 
-// Find all with filter + sort (use typed PathProperty from the Model interface)
+// Read the rows a filter selects, with a sort (the filter is required; use typed PathProperty from the Model interface)
 Stream<Order> pending = helper.findAll(
     OrderModel.STATUS.eq("PENDING"),
     OrderModel.CREATED_AT.desc());
@@ -422,8 +422,7 @@ helper.withTransaction(tx -> {
 
 **Helper pitfalls found by compiling against the library:**
 
-- `BeanDatastoreHelper` has no sort-only `findAll(QuerySort)`. To sort without filtering, pass a filter every row passes, for example `findAll(Model.ID.isNotNull(), Model.NAME.asc())`.
-- `BooleanProperty` has `eq(true)`, not `isTrue()`.
+- `BeanDatastoreHelper` has no `findAll()` without a filter and no sort-only overload, on purpose: reading every row is unbounded. Read a list with `findPage(page, size, sort)` or `findSlice(limit, offset, sort)`, and use `findAll(filter, sort)` only for a set the filter keeps naturally small; the filter must not be null. (holon-core removed the unbounded overloads after 12.0.0; with 12.0.0 they still compile but must not be used.)
 - A `DateTime` attribute is an `Instant` in the bean and `TIMESTAMP WITH TIME ZONE` in the migration (`JPA-008`).
 
 See [`skills/implement/references/datastore-patterns.md`](../skills/implement/references/datastore-patterns.md)
@@ -642,8 +641,8 @@ Generated code MUST follow these principles in addition to the stack rules above
   rather than long constructors or event handlers.
 - **No duplication** — share a single `BeanPropertySet<T>` constant per bean; reuse services
   across views instead of re-querying the Datastore inline.
-- **Always lazy-load; never eagerly fetch** — `BeanDatastoreHelper.findAll()` returns a
-  `Stream<T>` backed by a server-side cursor. Pass that `Stream` directly to
+- **Always lazy-load; never eagerly fetch** — `BeanDatastoreHelper.findAll(filter)`, `findPage(…)` and
+  `findSlice(…)` return a `Stream<T>` backed by a server-side cursor. Pass that `Stream` directly to
   `ListingBundleBuilder.fetch(...)`, `KanbanBoard.setItems(...)`, and any other data-binding
   call. **Never call `.toList()` inside a UI fetch callback** — doing so materialises the
   entire result set in JVM heap before the grid renders a single row. Reserve `.toList()` for
