@@ -12,6 +12,8 @@ description: >
 
 # Implement from HTML Mockup
 
+> **Screen map first.** If the project has `docs/architecture/screens.md`, find the screen this work belongs on and add to it; never create a view, route or menu item the map does not name, and stop and ask when the map does not cover it. See `../implement/SKILL.md`, "Screens, not views".
+
 ## Instructions
 
 Parse `$ARGUMENTS` (one or more HTML mockup files), infer the entity model,

@@ -29,6 +29,8 @@ If any file is missing, **stop** and tell the user which skill to run first:
 
 Do not attempt to infer or recreate the missing artifact.
 
+> **Screen map first.** If the project has `docs/architecture/screens.md`, find the screen this work belongs on and add to it; never create a view, route or menu item the map does not name, and stop and ask when the map does not cover it. See `../implement/SKILL.md`, "Screens, not views".
+
 ## Instructions
 
 Implement the use case `$ARGUMENTS` as a master-detail CRM view using the Holon Platform

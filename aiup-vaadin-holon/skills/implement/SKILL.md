@@ -67,8 +67,34 @@ and `playwright-test` skills for that.
 - `org.springframework.beans.factory.annotation.Autowired` — use **constructor injection**
 - `com.vaadin.flow.component.*` / `com.vaadin:vaadin-core` — **BANNED** (raw Vaadin core components); stop and ask the developer if no Holon equivalent exists
 
+## Screens, not views
+
+A use case is the unit of work, not a view. One use case may be a whole screen, a tab, a card, a
+button that opens a dialog, a filter chip, a column, or no UI at all, and one screen serves several
+use cases. Implementing each use case as its own view produces dozens of near-duplicate views.
+
+Read `docs/architecture/screens.md` (the project's screen map) **before writing any view**:
+
+| The map says the use case is | Do |
+|---|---|
+| a **3 views** screen's CRUD (list, detail, new) | create or complete those routes, once for the entity |
+| a tab, card, chip, column or action of a screen | **add it to the existing view** of that screen; create no route |
+| a **Page** | one view at the route the map gives |
+| **No UI** (a job) | write the service or scheduled job only; no view |
+
+- **Never create a view the map does not name.** A use case that is not in the map, or a screen that
+  needs a route the map does not list: **stop and ask** the user to update the map (or to say where it
+  belongs); do not invent a screen.
+- A screen is built the first time one of its use cases is implemented. Later use cases of the same
+  screen **change that view**; check what already exists in the feature package before writing.
+- Take the route, the roles and the side-navigation section from the map; do not choose your own.
+- If the project has **no screen map**, say so before writing a view: without one this skill will
+  create a view per use case. Ask the user whether to write the map first.
+- Report in the summary which screen the use case went on and what was added to it.
+
 ## Pre-Emit Checklist
 
+- [ ] **Screen map**: the use case was found in `docs/architecture/screens.md`, and the code went on that screen; no view, route or menu item exists that the map does not name; a use case that the map lists as a tab, card, chip or action created no route
 - [ ] No `PropertyBox` in emitted code
 - [ ] **Feature packages**: bean, model, service, and view all live in `com.example.<app>.<feature>`; no `domain/`, `service/`, or `ui/` layer packages
 - [ ] Services use `BeanDatastoreHelper<T>` for all persistence operations; raw `Datastore` / `BeanDatastore` query chains used only when `BeanDatastoreHelper` has no equivalent (with `// FALLBACK:` comment)
@@ -110,6 +136,7 @@ and `playwright-test` skills for that.
 
 ## Workflow
 
+0. **Find the screen** (see "Screens, not views" below). Read the project's screen map, `docs/architecture/screens.md`, and locate the row that lists `UC-XXX`. Implement the use case **on that screen**.
 1. Read the use case specification from `docs/use_cases/UC-XXX-*.md`
 2. Read the entity model from `docs/entity_model.md`
 3. Read [`references/bean-model.md`](references/bean-model.md) — JavaBean conventions
@@ -126,7 +153,7 @@ and `playwright-test` skills for that.
 14. Read [`references/architecture.md`](references/architecture.md) — package-by-feature layout, co-location rules, identity vs domain separation, when to add a service layer
 15. Read [`references/app-shell-defaults.md`](references/app-shell-defaults.md) — mandatory AppBar elements (search, notifications, user/sign-out menu, language switcher) and the two-locale i18n bundle + `LocalizationContext` wiring
 16. Check existing code for patterns and conventions
-16. **Feature package**: determine the feature name from the use case (e.g. `customer`, `invoice`). All classes produced in steps below go in `com.example.<app>.<feature>` — bean, model, service, and view in the **same** package. Genuinely cross-cutting classes (application shell, auth config, the audit base class or `AuditUtil`/`AuditedBean`) go in `com.example.<app>.shared`. **Never create `domain/`, `service/`, or `ui/` layer packages** — they break co-location and make the feature-package rule unenforceable.
+16. **Feature package**: the feature name is the screen's entity from the screen map (e.g. `customer`, `invoice`); without a map, derive it from the use case. All classes produced in steps below go in `com.example.<app>.<feature>` — bean, model, service, and view in the **same** package. Genuinely cross-cutting classes (application shell, auth config, the audit base class or `AuditUtil`/`AuditedBean`) go in `com.example.<app>.shared`. **Never create `domain/`, `service/`, or `ui/` layer packages** — they break co-location and make the feature-package rule unenforceable.
 17. **Domain + Model**: create or update JavaBean(s) with `@DataPath` / `@Identifier`, `@Caption(value, messageCode)` on **every** user-visible field, and all Jakarta Bean Validation constraints (`@NotNull`, `@NotBlank`, `@Size`, `@Min`, `@Max`, `@Email`, etc.) on mandatory/constrained fields; add the five **audit & version fields** (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`, `version`) as documented in [`references/bean-model.md`](references/bean-model.md) §"Audit & Version fields" — these are **mandatory** on every domain bean; how the bean gets them depends on the project — extend the existing audit base class when Spring Data auditing is wired (holon-saas), otherwise implement `AuditedBean`; read [`references/audit-wiring.md`](references/audit-wiring.md) §"Which mode" first; create a companion `<Entity>Model` interface with `BeanPropertySet` and typed `PathProperty` constants for every bean field (exclude audit fields from `LISTING_SUBSET` and `FORM_SUBSET`). **Infer lookup entities**: if the use case or entity model contains any dropdown / combobox or categorical field (status, type, tier, category, industry, country, department, etc.), **always** create a dedicated lookup JavaBean + Model + Service + Flyway migration for each — there are no Java enum types for domain values; link the parent entity via a `Long` foreign-key `id` field. Every lookup service must expose a `findOrCreate(String label)` method (see `references/datastore-patterns.md`) so users can freely type new values.
 18. **Service**: implement service class using `BeanDatastoreHelper<T>` in the same feature package; in a project without Spring Data auditing call `AuditUtil.stampCreate(bean)` before INSERT and `AuditUtil.stampUpdate(bean)` before UPDATE; where auditing is wired, **never stamp by hand** (see [`references/audit-wiring.md`](references/audit-wiring.md)); use `BeanDatastoreHelper` methods for all queries; fall back to raw `BeanDatastore` only when `BeanDatastoreHelper` has no equivalent method (inject `Datastore` via constructor; a `@Service` with constructor injection is allowed when Spring lifecycle is required)
 19. **View**: implement Holon Vaadin Flow view in the same feature package (`@Route(layout = MainLayout.class)`, `Components.listing(T.class)` for grids / `EntityFormPanel.bean(T.class)` for forms — **never** assemble `FormLayout` + individual `Input` fields; bind each lookup-entity field as a **creatable combobox**: `Input.singleSelect(Long.class).items(svc.findAll(), ...).allowCustomValues(true).onCustomValueSet(v -> { Long id = svc.findOrCreate(v); ... })` — see `references/component-dictionary.md` §5 and `references/holon-vaadin-ui.md` "Lookup-entity combobox"; all validation comes from bean annotations + `.autoRequiredIndicators(true)`, semantic button variants (`.primary()`, `.error()`, etc.) on all buttons, Holon Auth guards); use `Navigator.get().navigateTo(...)` for all programmatic navigation — see [`references/navigation.md`](references/navigation.md); catch `ValidationException` and `DataAccessException` in save callbacks — see [`references/error-handling.md`](references/error-handling.md); **for reactive UI-local state** (loading flag, form mode toggle, selected-row state shared between panels) use `ValueSignal<T>` + `Signal.effect(component, …)`; **for real-time cross-session state** (live counters, shared values, live feeds) use `SharedNumberSignal` / `SharedValueSignal<T>` / `SharedListSignal<T>` declared as `@Bean` and injected via constructor — see [`references/holon-vaadin-ui.md`](references/holon-vaadin-ui.md) §"Vaadin Signals"
